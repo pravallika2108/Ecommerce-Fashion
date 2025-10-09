@@ -31,4 +31,3 @@ export const upload = multer({
   fileFilter: fileFilter,
   limits: { fieldSize: 1024 * 1024 * 5 },
 });
-
