@@ -52,7 +52,7 @@ function LoginPage() {
       const user = useAuthStore.getState().user;
        console.log(user)
       if (user?.role === "SUPER_ADMIN") router.push("/super-admin");
-      else  window.location.href = "/home";;
+      else  router.push("/home");
     }
   };
   return (
