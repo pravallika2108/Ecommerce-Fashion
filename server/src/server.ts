@@ -15,7 +15,7 @@ import orderRoutes from "./routes/orderRoutes";
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3001;
-const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
+const FRONTEND_URL = process.env.FRONTEND_URL;
 const corsOptions = {
  
    origin: FRONTEND_URL, // Use environment variable
