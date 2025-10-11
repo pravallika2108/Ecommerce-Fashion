@@ -58,13 +58,12 @@ function LoginPage() {
       const user = useAuthStore.getState().user;
       console.log("User from store:", user);
 
-      if (user?.role === "SUPER_ADMIN") {
-        console.log("Redirecting to /super-admin");
-        router.push("/super-admin");
-      } else {
-        console.log("Redirecting to /home");
-        router.push("/home");
-      }
+     if (user?.role === "SUPER_ADMIN") {
+  window.location.href = "/super-admin"; // triggers server-side navigation
+} else {
+  window.location.href = "/home";
+}
+
     } else {
       console.log("Login failed");
       toast({
