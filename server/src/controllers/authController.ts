@@ -97,6 +97,10 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
     //set out tokens
     await setTokens(res, accessToken, refreshToken);
+     await prisma.user.update({
+      where: { id: extractCurrentUser.id },
+      data: { refreshToken: refreshToken }
+    });
     res.status(200).json({
       success: true,
       message: "Login successfully",
@@ -106,6 +110,8 @@ export const login = async (req: Request, res: Response): Promise<void> => {
         email: extractCurrentUser.email,
         role: extractCurrentUser.role,
       },
+      accessToken,
+      refreshToken
     });
   } catch (error) {
     console.error(error);
