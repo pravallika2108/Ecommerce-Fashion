@@ -17,6 +17,7 @@ function LoginPage() {
     email: "",
     password: "",
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const { login, isLoading } = useAuthStore();
   const router = useRouter();
@@ -30,6 +31,14 @@ function LoginPage() {
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    
+    // Prevent multiple submissions
+    if (isSubmitting || isLoading) {
+      console.log("Already submitting, ignoring click");
+      return;
+    }
+    
+    setIsSubmitting(true);
     console.log("=== LOGIN FORM SUBMIT ===");
     console.log("Form data:", formData);
 
@@ -43,6 +52,7 @@ function LoginPage() {
         title: checkFirstLevelOfValidation.error,
         variant: "destructive",
       });
+      setIsSubmitting(false);
       return;
     }
 
@@ -55,21 +65,27 @@ function LoginPage() {
         title: "Login Successful!",
       });
 
-      const user = useAuthStore.getState().user;
-      console.log("User from store:", user);
+      // Wait for state to update, then redirect
+      setTimeout(() => {
+        const user = useAuthStore.getState().user;
+        console.log("User from store:", user);
 
-     if (user?.role === "SUPER_ADMIN") {
-  router.push("/super-admin"); // triggers server-side navigation
-} else {
-  router.push("/home");
-}
-
+        if (user?.role === "SUPER_ADMIN") {
+          console.log("Redirecting to super-admin");
+          router.push("/super-admin");
+        } else {
+          console.log("Redirecting to home");
+          router.push("/home");
+        }
+        setIsSubmitting(false);
+      }, 200);
     } else {
       console.log("Login failed");
       toast({
         title: "Login failed",
         variant: "destructive",
       });
+      setIsSubmitting(false);
     }
   };
 
@@ -119,9 +135,9 @@ function LoginPage() {
             <Button
               type="submit"
               className="w-full bg-black text-white hover:bg-black transition-colors"
-              disabled={isLoading}
+              disabled={isLoading || isSubmitting}
             >
-              {isLoading ? "LOGGING IN..." : "LOGIN"}
+              {isLoading || isSubmitting ? "LOGGING IN..." : "LOGIN"}
             </Button>
             <p className="text-center text-[#3f3d56] text-sm">
               New here{" "}
