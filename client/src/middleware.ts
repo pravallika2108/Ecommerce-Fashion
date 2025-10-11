@@ -8,10 +8,10 @@ const userRoutes = ["/home"];
 export async function middleware(request: NextRequest) {
   // 1. Read access token from Authorization header Bearer token
   const authHeader = request.headers.get("authorization") || "";
-  const accessToken = authHeader.startsWith("Bearer ")
+  const accessToken = authHeader.startsWith("Bearer ");
     ? authHeader.substring(7)
     : null;
-
+   console.log("accessToken",accessToken)
   const { pathname } = request.nextUrl;
 
   if (accessToken) {
