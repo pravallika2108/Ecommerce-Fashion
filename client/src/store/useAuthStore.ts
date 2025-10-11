@@ -1,3 +1,5 @@
+// src/store/useAuthStore.ts
+
 import { API_ROUTES } from "@/utils/api";
 import axios from "axios";
 import { create } from "zustand";
@@ -12,31 +14,28 @@ type User = {
 
 type AuthStore = {
   user: User | null;
+  accessToken: string | null;
   isLoading: boolean;
   error: string | null;
-  register: (
-    name: string,
-    email: string,
-    password: string
-  ) => Promise<string | null>;
+  register: (name: string, email: string, password: string) => Promise<string | null>;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
-  refreshAccessToken: () => Promise<Boolean>;
+  refreshAccessToken: () => Promise<boolean>;
 };
 
 const axiosInstance = axios.create({
   baseURL: API_ROUTES.AUTH,
-  withCredentials: true,
+  withCredentials: true, // so that cookies are sent in requests
 });
-console.log("Axios base URL:", axiosInstance.defaults.baseURL);
-console.log("Full request URL will be:", `${axiosInstance.defaults.baseURL}/login`);
 
 export const useAuthStore = create<AuthStore>()(
   persist(
     (set, get) => ({
       user: null,
+      accessToken: null,
       isLoading: false,
       error: null,
+
       register: async (name, email, password) => {
         set({ isLoading: true, error: null });
         try {
@@ -45,20 +44,20 @@ export const useAuthStore = create<AuthStore>()(
             email,
             password,
           });
-
           set({ isLoading: false });
           return response.data.userId;
-        } catch (error) {
+        } catch (err) {
           set({
             isLoading: false,
-            error: axios.isAxiosError(error)
-              ? error?.response?.data?.error || "Registration failed"
-              : "Registration failed",
+            error:
+              axios.isAxiosError(err) && err.response
+                ? (err.response.data.error as string)
+                : "Registration failed",
           });
-
           return null;
         }
       },
+
       login: async (email, password) => {
         set({ isLoading: true, error: null });
         try {
@@ -66,52 +65,72 @@ export const useAuthStore = create<AuthStore>()(
             email,
             password,
           });
-            console.log("=== FRONTEND LOGIN DEBUG ===");
-    console.log("Response status:", response.status);
-    console.log("Response headers:", response.headers);
-    console.log("Browser cookies:", document.cookie);
-    
 
-          set({ isLoading: false, user: response.data.user });
-          return true;
-        } catch (error) {
+          console.log("=== FRONTEND LOGIN DEBUG ===");
+          console.log("Response status:", response.status);
+          console.log("Response data:", response.data);
+          console.log("Response headers:", response.headers);
+
+          const { user, accessToken } = response.data;
+
           set({
             isLoading: false,
-            error: axios.isAxiosError(error)
-              ? error?.response?.data?.error || "Login failed"
-              : "Login failed",
+            user,
+            accessToken: accessToken ?? null,
           });
 
+          return true;
+        } catch (err) {
+          set({
+            isLoading: false,
+            error:
+              axios.isAxiosError(err) && err.response
+                ? (err.response.data.error as string)
+                : "Login failed",
+          });
           return false;
         }
       },
+
       logout: async () => {
-        set({ isLoading: true, error: null });
+        set({ isLoading: true });
         try {
           await axiosInstance.post("/logout");
-          set({ user: null, isLoading: false });
-        } catch (error) {
+          set({ user: null, accessToken: null, isLoading: false });
+        } catch (err) {
           set({
             isLoading: false,
-            error: axios.isAxiosError(error)
-              ? error?.response?.data?.error || "Logout failed"
-              : "Logout failed",
+            error:
+              axios.isAxiosError(err) && err.response
+                ? (err.response.data.error as string)
+                : "Logout failed",
           });
         }
       },
+
       refreshAccessToken: async () => {
         try {
-          await axiosInstance.post("/refresh-token");
-          return true;
-        } catch (e) {
-          console.error(e);
+          const response = await axiosInstance.post("/refresh-token");
+          console.log("FRONTEND REFRESH DEBUG:", response.data);
+          const { accessToken } = response.data;
+          if (accessToken) {
+            set({ accessToken });
+            return true;
+          } else {
+            return false;
+          }
+        } catch (err) {
+          console.error("Refresh token error frontend:", err);
           return false;
         }
       },
     }),
     {
       name: "auth-storage",
-      partialize: (state) => ({ user: state.user }),
+      partialize: (state) => ({
+        user: state.user,
+        accessToken: state.accessToken,
+      }),
     }
   )
 );
