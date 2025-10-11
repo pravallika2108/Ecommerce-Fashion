@@ -15,12 +15,10 @@ import orderRoutes from "./routes/orderRoutes";
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3001;
-
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
 const corsOptions = {
-  origin: process.env.FRONTEND_URL,
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
+  origin: FRONTEND_URL,
+  // ...
 };
 
 app.use(cors(corsOptions));
