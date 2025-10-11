@@ -1,99 +1,131 @@
-// middleware.ts
-import { NextRequest, NextResponse } from "next/server";
-import { jwtVerify } from "jose";
+// useAuthStore.ts
+import { API_ROUTES } from "@/utils/api";
+import axios from "axios";
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
-const publicRoutes = ["/auth/login", "/auth/register"];
-const superAdminRoutes = ["/super-admin", "/super-admin/:path*"];
-const userRoutes = ["/home"];
-
-export async function middleware(request: NextRequest) {
-  const authHeader = request.headers.get("authorization") || "";
-  const bearerToken = authHeader.startsWith("Bearer ")
-    ? authHeader.substring(7)
-    : null;
-
-  const { pathname } = request.nextUrl;
-  console.log("accessToken:", bearerToken);
-
-  if (bearerToken) {
-    try {
-      const { payload } = await jwtVerify(
-        bearerToken,
-        new TextEncoder().encode(process.env.JWT_SECRET!)
-      );
-
-      const { role } = payload as { role: string };
-
-      // Redirect logged-in users away from public routes
-      if (publicRoutes.includes(pathname)) {
-        return NextResponse.redirect(
-          new URL(role === "SUPER_ADMIN" ? "/super-admin" : "/home", request.url)
-        );
-      }
-
-      // Role-based route protection
-      if (
-        role === "SUPER_ADMIN" &&
-        userRoutes.some((route) => pathname.startsWith(route))
-      ) {
-        return NextResponse.redirect(new URL("/super-admin", request.url));
-      }
-
-      if (
-        role !== "SUPER_ADMIN" &&
-        superAdminRoutes.some((route) => pathname.startsWith(route))
-      ) {
-        return NextResponse.redirect(new URL("/home", request.url));
-      }
-
-      return NextResponse.next();
-    } catch (err) {
-      console.error("Access token verification failed", err);
-      // Try refresh
-    }
-  }
-
-  // ➤ Try refresh with cookie-based refresh token
-  try {
-    const refreshRes = await fetch(`${request.nextUrl.origin}/auth/refresh-token`, {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-    });
-
-    if (refreshRes.ok) {
-      const data = await refreshRes.json();
-      const newAccessToken = data.accessToken;
-
-      if (newAccessToken) {
-        const response = NextResponse.next();
-        response.headers.set("authorization", `Bearer ${newAccessToken}`); // allow access in next middleware run if needed
-        response.cookies.set("accessToken", newAccessToken, {
-          httpOnly: true,
-          secure: true,
-          sameSite: "lax",
-          path: "/",
-        });
-
-        return response;
-      }
-    }
-  } catch (e) {
-    console.error("Refresh token failed", e);
-  }
-
-  // ➤ Redirect to login if refresh fails or no token
-  if (!publicRoutes.includes(pathname)) {
-    const resp = NextResponse.redirect(new URL("/auth/login", request.url));
-    resp.cookies.delete("accessToken");
-    resp.cookies.delete("refreshToken");
-    return resp;
-  }
-
-  return NextResponse.next();
-}
-
-export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+type User = {
+  id: string;
+  name: string | null;
+  email: string;
+  role: "USER" | "SUPER_ADMIN";
 };
+
+type AuthStore = {
+  user: User | null;
+  accessToken: string | null;
+  isLoading: boolean;
+  error: string | null;
+  register: (name: string, email: string, password: string) => Promise<string | null>;
+  login: (email: string, password: string) => Promise<boolean>;
+  logout: () => Promise<void>;
+  refreshAccessToken: () => Promise<boolean>;
+};
+
+const axiosInstance = axios.create({
+  baseURL: API_ROUTES.AUTH,
+  withCredentials: true, // Important for refresh token cookie
+});
+
+// Inject access token into requests
+axiosInstance.interceptors.request.use((config) => {
+  const token = useAuthStore.getState().accessToken;
+  if (token) {
+    config.headers = config.headers ?? {};
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+export const useAuthStore = create<AuthStore>()(
+  persist(
+    (set, get) => ({
+      user: null,
+      accessToken: null,
+      isLoading: false,
+      error: null,
+
+      register: async (name, email, password) => {
+        set({ isLoading: true, error: null });
+        try {
+          const response = await axiosInstance.post("/register", {
+            name,
+            email,
+            password,
+          });
+          set({ isLoading: false });
+          return response.data.userId;
+        } catch (error) {
+          set({
+            isLoading: false,
+            error: axios.isAxiosError(error)
+              ? error?.response?.data?.error || "Registration failed"
+              : "Registration failed",
+          });
+          return null;
+        }
+      },
+
+      login: async (email, password) => {
+        set({ isLoading: true, error: null });
+        try {
+          const response = await axiosInstance.post("/login", {
+            email,
+            password,
+          });
+
+          const { accessToken, user } = response.data;
+          set({ user, accessToken, isLoading: false });
+          return true;
+        } catch (error) {
+          set({
+            isLoading: false,
+            error: axios.isAxiosError(error)
+              ? error?.response?.data?.error || "Login failed"
+              : "Login failed",
+          });
+          return false;
+        }
+      },
+
+      logout: async () => {
+        set({ isLoading: true });
+        try {
+          await axiosInstance.post("/logout");
+          set({ user: null, accessToken: null, isLoading: false });
+        } catch (error) {
+          set({
+            isLoading: false,
+            error: axios.isAxiosError(error)
+              ? error?.response?.data?.error || "Logout failed"
+              : "Logout failed",
+          });
+        }
+      },
+
+      refreshAccessToken: async () => {
+        try {
+          const response = await axiosInstance.post("/refresh-token");
+          const newAccessToken = response.data.accessToken;
+          if (newAccessToken) {
+            set({ accessToken: newAccessToken });
+            return true;
+          }
+          return false;
+        } catch (e) {
+          console.error("Refresh token error", e);
+          return false;
+        }
+      },
+    }),
+    {
+      name: "auth-storage",
+      partialize: (state) => ({
+        user: state.user,
+        accessToken: state.accessToken,
+      }),
+    }
+  )
+);
+
 
