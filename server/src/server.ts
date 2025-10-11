@@ -1,49 +1,52 @@
-// src/server.ts or src/index.ts (your main Express file)
+import { PrismaClient } from "@prisma/client";
+import dotenv from "dotenv";
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import authRoutes from "./routes/authRoutes";
+import productRoutes from "./routes/productRoutes";
+import couponRoutes from "./routes/couponRoutes";
+import settingsRoutes from "./routes/settingRoutes";
+import cartRoutes from "./routes/cartRoutes";
+import addressRoutes from "./routes/addressRoutes";
+import orderRoutes from "./routes/orderRoutes";
 
+//load all your enviroment variables
+dotenv.config();
 const app = express();
+const PORT = process.env.PORT || 3001;
 
-// CRITICAL: CORS must come BEFORE routes
-const allowedOrigins = [
-  "http://localhost:3000",
-  "https://ecommerce-fashion-1.onrender.com", // Your frontend URL
-  process.env.FRONTEND_URL,
-].filter(Boolean);
+const corsOptions = {
+  origin: process.env.FRONTEND_URL,
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
 
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      // Allow requests with no origin (like mobile apps or curl requests)
-      if (!origin) return callback(null, true);
-      
-      if (allowedOrigins.indexOf(origin) !== -1) {
-        callback(null, true);
-      } else {
-        console.log("Blocked by CORS:", origin);
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
-    credentials: true, // THIS IS CRITICAL FOR COOKIES!
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
-    exposedHeaders: ["Set-Cookie"],
-  })
-);
-
-// Parse cookies
+app.use(cors(corsOptions));
+app.use(express.json());
 app.use(cookieParser());
 
-// Parse JSON bodies
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+export const prisma = new PrismaClient();
 
-// Your routes here
 app.use("/api/auth", authRoutes);
+app.use("/api/products", productRoutes);
+app.use("/api/coupon", couponRoutes);
+app.use("/api/settings", settingsRoutes);
+app.use("/api/cart", cartRoutes);
+app.use("/api/address", addressRoutes);
+app.use("/api/order", orderRoutes);
 
-// Start server
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+app.get("/", (req, res) => {
+  res.send("Hello from E-Commerce backend");
 });
+
+app.listen(PORT, () => {
+  console.log(`Server is now running on port ${PORT}`);
+});
+
+process.on("SIGINT", async () => {
+  await prisma.$disconnect();
+  process.exit();
+});
+
