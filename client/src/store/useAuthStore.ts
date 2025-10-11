@@ -64,6 +64,7 @@ export const useAuthStore = create<AuthStore>()(
             email,
             password,
           });
+          console.log(response.data.accessToken);
 
           set({ isLoading: false, user: response.data.user });
           return true;
