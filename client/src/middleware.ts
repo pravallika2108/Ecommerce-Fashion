@@ -45,7 +45,7 @@ export async function middleware(request: NextRequest) {
     } catch (e) {
       console.error("Token verification failed", e);
       const refreshResponse = await fetch(
-        "https://ecommerce-fashion-03io.onrender.com/api/auth/refresh-token",
+        "http://localhost:3000",
         {
           method: "POST",
           credentials: "include",
@@ -81,3 +81,4 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
 };
+
