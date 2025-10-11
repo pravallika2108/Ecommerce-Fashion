@@ -6,8 +6,8 @@ const superAdminRoutes = ["/super-admin", "/super-admim/:path*"];
 const userRoutes = ["/home"];
 
 export async function middleware(request: NextRequest) {
-  const accessToken = request.cookies.accessToken;
-  console.log("accessToken",accessToken)
+  const accessToken = request.cookies.get("accessToken").value?;
+
   const { pathname } = request.nextUrl;
 
   if (accessToken) {
