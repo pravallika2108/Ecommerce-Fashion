@@ -72,6 +72,8 @@ export const useAuthStore = create<AuthStore>()(
           console.log("Response headers:", response.headers);
 
           const { user, accessToken } = response.data;
+             localStorage.setItem("accessToken", response.data.accessToken);
+             localStorage.setItem("refreshToken", response.data.refreshToken);
 
           set({
             isLoading: false,
