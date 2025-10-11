@@ -28,7 +28,8 @@ const axiosInstance = axios.create({
   baseURL: API_ROUTES.AUTH,
   withCredentials: true,
 });
-console.log(API_ROUTES.AUTH)
+console.log("Axios base URL:", axiosInstance.defaults.baseURL);
+console.log("Full request URL will be:", `${axiosInstance.defaults.baseURL}/login`);
 
 export const useAuthStore = create<AuthStore>()(
   persist(
