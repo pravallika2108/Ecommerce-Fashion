@@ -103,6 +103,9 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
     //set out tokens
     await setTokens(res, accessToken, refreshToken);
+    console.log("=== BACKEND LOGIN DEBUG ===");
+    console.log("Response headers before sending:", res.getHeaders());
+    console.log("Set-Cookie header:", res.getHeaders()["set-cookie"]);
      await prisma.user.update({
       where: { id: extractCurrentUser.id },
       data: { refreshToken: refreshToken }
