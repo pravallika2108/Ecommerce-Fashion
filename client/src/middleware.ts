@@ -1,3 +1,5 @@
+// src/middleware.ts
+
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
@@ -5,7 +7,9 @@ const publicRoutes = ["/auth/register", "/auth/login"];
 const superAdminRoutes = ["/super-admin", "/super-admin/:path*"];
 const userRoutes = ["/home"];
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "https://ecommerce-fashion-03io.onrender.com";
+const BACKEND_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+  "https://ecommerce-fashion-03io.onrender.com";
 
 export async function middleware(request: NextRequest) {
   const accessToken = request.cookies.get("accessToken")?.value;
@@ -25,16 +29,13 @@ export async function middleware(request: NextRequest) {
       );
       const { role } = payload as { role: string };
 
-      // User is authenticated
+      // If user is already authenticated, avoid showing login/register
       if (publicRoutes.includes(pathname)) {
-        return NextResponse.redirect(
-          new URL(
-            role === "SUPER_ADMIN" ? "/super-admin" : "/home",
-            request.url
-          )
-        );
+        const dest = role === "SUPER_ADMIN" ? "/super-admin" : "/home";
+        return NextResponse.redirect(new URL(dest, request.url));
       }
 
+      // Role-based route protection
       if (
         role === "SUPER_ADMIN" &&
         userRoutes.some((route) => pathname.startsWith(route))
@@ -50,10 +51,10 @@ export async function middleware(request: NextRequest) {
       }
 
       return NextResponse.next();
-    } catch (e) {
-      console.error("Token verification failed:", e);
+    } catch (err) {
+      console.error("Token verification failed:", err);
 
-      // Token expired, try to refresh
+      // Token might be expired or invalid → try refresh
       if (refreshToken) {
         try {
           const refreshResponse = await fetch(
@@ -63,35 +64,45 @@ export async function middleware(request: NextRequest) {
               credentials: "include",
               headers: {
                 "Content-Type": "application/json",
+                // If backend expects the cookie via header, but normally credentials: include is enough
                 Cookie: `refreshToken=${refreshToken}`,
               },
             }
           );
 
+          console.log("Refresh response status:", refreshResponse.status);
+
           if (refreshResponse.ok) {
+            const data = await refreshResponse.json();
+            const newAccessToken = data.accessToken;
+            console.log("Middleware got newAccessToken:", newAccessToken);
+
             const response = NextResponse.next();
-            const setCookieHeader = refreshResponse.headers.get("set-cookie");
-            if (setCookieHeader) {
-              response.headers.set("set-cookie", setCookieHeader);
-            }
+
+            // Set new access token cookie
+            response.cookies.set("accessToken", newAccessToken, {
+              httpOnly: true,
+              secure: true,
+              sameSite: "lax",
+              path: "/",
+            });
+
             return response;
           }
-        } catch (refreshError) {
-          console.error("Token refresh failed:", refreshError);
+        } catch (refreshErr) {
+          console.error("Token refresh error:", refreshErr);
         }
       }
 
-      // Refresh failed or no refresh token
-      const response = NextResponse.redirect(
-        new URL("/auth/login", request.url)
-      );
-      response.cookies.delete("accessToken");
-      response.cookies.delete("refreshToken");
-      return response;
+      // If refresh fails or no refreshToken, redirect to login
+      const resp = NextResponse.redirect(new URL("/auth/login", request.url));
+      resp.cookies.delete("accessToken");
+      resp.cookies.delete("refreshToken");
+      return resp;
     }
   }
 
-  // No access token
+  // No access token at all — if route is not public, redirect to login
   if (!publicRoutes.includes(pathname)) {
     return NextResponse.redirect(new URL("/auth/login", request.url));
   }
