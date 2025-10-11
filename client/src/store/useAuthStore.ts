@@ -1,6 +1,6 @@
 // src/store/useAuthStore.ts
 import { API_ROUTES } from "@/utils/api";
-import axios from "axios";
+import { axiosInstance } from "@/lib/axios";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
@@ -23,10 +23,7 @@ type AuthStore = {
   refreshAccessToken: () => Promise<boolean>;
 };
 
-const axiosInstance = axios.create({
-  baseURL: API_ROUTES.AUTH,
-  withCredentials: true,
-});
+
 
 export const useAuthStore = create<AuthStore>()(
   persist(
