@@ -28,6 +28,7 @@ const axiosInstance = axios.create({
   baseURL: API_ROUTES.AUTH,
   withCredentials: true,
 });
+console.log(API_ROUTES.AUTH)
 
 export const useAuthStore = create<AuthStore>()(
   persist(
