@@ -1,4 +1,4 @@
-export const API_BASE_URL = "https://ecommerce-fashion-03io.onrender.com";
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export const API_ROUTES = {
   AUTH: `${API_BASE_URL}/api/auth`,
