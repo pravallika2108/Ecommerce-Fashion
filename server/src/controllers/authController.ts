@@ -23,20 +23,25 @@ async function setTokens(
   accessToken: string,
   refreshToken: string
 ) {
+  // For cross-domain cookies to work, BOTH secure and sameSite: "none" are required
   res.cookie("accessToken", accessToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "none",
-    maxAge: 60 * 60 * 1000,
+    secure: true, // MUST be true for HTTPS domains
+    sameSite: "none", // REQUIRED for cross-domain
+    maxAge: 60 * 60 * 1000, // 1 hour
+    path: "/",
   });
+
   res.cookie("refreshToken", refreshToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: true,
     sameSite: "none",
-    maxAge: 7 * 24 * 60 * 60*1000,
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    path: "/",
   });
-}
 
+  console.log("Cookies set: accessToken and refreshToken with sameSite=none, secure=true");
+}
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
     const { name, email, password } = req.body;
