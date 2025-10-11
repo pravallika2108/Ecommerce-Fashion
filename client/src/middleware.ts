@@ -17,6 +17,7 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   console.log("=== MIDDLEWARE DEBUG ===");
+  console.log("Pathname:", request.nextUrl.pathname);
   console.log("Pathname:", pathname);
   console.log("AccessToken:", accessToken ? "exists" : "undefined");
   console.log("RefreshToken:", refreshToken ? "exists" : "undefined");
