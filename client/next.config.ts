@@ -1,9 +1,33 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
   images: {
     domains: ["res.cloudinary.com"],
+  },
+  async headers() {
+    return [
+      {
+        source: "/(.*)", // apply to all routes
+        headers: [
+          {
+            key: "Access-Control-Allow-Credentials",
+            value: "true",
+          },
+          {
+            key: "Access-Control-Allow-Origin",
+            value: "https://your-frontend-domain.com", // 👈 must match your frontend domain (NOT backend)
+          },
+          {
+            key: "Access-Control-Allow-Methods",
+            value: "GET, POST, PUT, DELETE, OPTIONS",
+          },
+          {
+            key: "Access-Control-Allow-Headers",
+            value: "Content-Type, Authorization",
+          },
+        ],
+      },
+    ];
   },
 };
 
