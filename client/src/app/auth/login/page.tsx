@@ -59,9 +59,9 @@ function LoginPage() {
       console.log("User from store:", user);
 
      if (user?.role === "SUPER_ADMIN") {
-  window.location.href = "/super-admin"; // triggers server-side navigation
+  router.push("/super-admin"); // triggers server-side navigation
 } else {
-  window.location.href = "/home";
+  router.push("/home");
 }
 
     } else {
