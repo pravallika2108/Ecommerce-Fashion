@@ -1,91 +1,167 @@
-// src/controllers/authController.ts (or wherever your login is)
 import { prisma } from "../server";
 import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { v4 as uuidv4 } from "uuid";
 
 function generateToken(userId: string, email: string, role: string) {
   const accessToken = jwt.sign(
-    { userId, email, role },
+    {
+      userId,
+      email,
+      role,
+    },
     process.env.JWT_SECRET!,
-    { expiresIn: "15m" }
+    { expiresIn: "60m" }
   );
-
-  const refreshToken = jwt.sign(
-    { userId, email, role },
-    process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET!,
-    { expiresIn: "7d" }
-  );
-
+  const refreshToken = uuidv4();
   return { accessToken, refreshToken };
 }
 
-export const login = async (req: Request, res: Response) => {
+async function setTokens(
+  res: Response,
+  accessToken: string,
+  refreshToken: string
+) {
+  res.cookie("accessToken", accessToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    maxAge: 60 * 60 * 1000,
+  });
+  res.cookie("refreshToken", refreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    maxAge: 7 * 24 * 60 * 60,
+  });
+}
+
+export const register = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { name, email, password } = req.body;
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (existingUser) {
+      res.status(400).json({
+        success: false,
+        error: "User with this email exists!",
+      });
+      return;
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 12);
+    const user = await prisma.user.create({
+      data: {
+        name,
+        email,
+        password: hashedPassword,
+        role: "USER",
+      },
+    });
+
+    res.status(201).json({
+      message: "User registered successfully",
+      success: true,
+      userId: user.id,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Registration failed" });
+  }
+};
+
+export const login = async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, password } = req.body;
+    const extractCurrentUser = await prisma.user.findUnique({
+      where: { email },
+    });
 
-    if (!email || !password) {
-      return res.status(400).json({ error: "Email and password are required" });
+    if (
+      !extractCurrentUser ||
+      !(await bcrypt.compare(password, extractCurrentUser.password))
+    ) {
+      res.status(401).json({
+        success: false,
+        error: "Invalied credentials",
+      });
+
+      return;
     }
+    //create our access and refreshtoken
+    const { accessToken, refreshToken } = generateToken(
+      extractCurrentUser.id,
+      extractCurrentUser.email,
+      extractCurrentUser.role
+    );
 
-    const user = await prisma.user.findUnique({ where: { email } });
+    //set out tokens
+    await setTokens(res, accessToken, refreshToken);
+    res.status(200).json({
+      success: true,
+      message: "Login successfully",
+      user: {
+        id: extractCurrentUser.id,
+        name: extractCurrentUser.name,
+        email: extractCurrentUser.email,
+        role: extractCurrentUser.role,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Login failed" });
+  }
+};
+
+export const refreshAccessToken = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  const refreshToken = req.cookies.refreshToken;
+  if (!refreshToken) {
+    res.status(401).json({
+      success: false,
+      error: "Invalid refresh token",
+    });
+  }
+
+  try {
+    const user = await prisma.user.findFirst({
+      where: {
+        refreshToken: refreshToken,
+      },
+    });
 
     if (!user) {
-      return res.status(401).json({ error: "Invalid credentials" });
+      res.status(401).json({
+        success: false,
+        error: "User not found",
+      });
+      return;
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-
-    if (!isPasswordValid) {
-      return res.status(401).json({ error: "Invalid credentials" });
-    }
-
-    const { accessToken, refreshToken } = generateToken(
+    const { accessToken, refreshToken: newRefreshToken } = generateToken(
       user.id,
       user.email,
       user.role
     );
-
-    // CRITICAL: Check NODE_ENV
-    const isProduction = process.env.NODE_ENV === "production";
-    
-    console.log("=== BACKEND LOGIN DEBUG ===");
-    console.log("NODE_ENV:", process.env.NODE_ENV);
-    console.log("isProduction:", isProduction);
-    console.log("Setting cookies with sameSite:", isProduction ? "none" : "lax");
-
-    // Set cookies with correct settings
-    res.cookie("accessToken", accessToken, {
-      httpOnly: true,
-      secure: isProduction, // true in production
-      sameSite: isProduction ? "none" : "lax", // "none" requires secure: true
-      maxAge: 15 * 60 * 1000, // 15 minutes
-      path: "/",
-    });
-
-    res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: isProduction ? "none" : "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      path: "/",
-    });
-
-    console.log("Cookies set, sending response");
-
-    return res.status(200).json({
+    //set out tokens
+    await setTokens(res, accessToken, newRefreshToken);
+    res.status(200).json({
       success: true,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
-      accessToken, // Also send in body for localStorage backup
-      refreshToken, // Also send in body
+      message: "Refresh token refreshed successfully",
     });
   } catch (error) {
-    console.error("Login error:", error);
-    return res.status(500).json({ error: "Internal server error" });
+    console.error(error);
+    res.status(500).json({ error: "Refresh token error" });
   }
+};
+
+export const logout = async (req: Request, res: Response): Promise<void> => {
+  res.clearCookie("accessToken");
+  res.clearCookie("refreshToken");
+  res.json({
+    success: true,
+    message: "User logged out successfully",
+  });
 };
