@@ -15,7 +15,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: "Access-Control-Allow-Origin",
-            value: "https://your-frontend-domain.com", // 👈 must match your frontend domain (NOT backend)
+            value: "https://ecommerce-fashion-1.onrender.com", // 👈 must match your frontend domain (NOT backend)
           },
           {
             key: "Access-Control-Allow-Methods",
