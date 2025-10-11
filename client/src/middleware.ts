@@ -3,22 +3,38 @@ import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
 const publicRoutes = ["/auth/register", "/auth/login"];
-const superAdminRoutes = ["/super-admin", "/super-admin/:path*"];
+const superAdminRoutes = ["/super-admin"];
 const userRoutes = ["/home"];
+
 const BACKEND_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ||
   "https://ecommerce-fashion-03io.onrender.com";
 
 export async function middleware(request: NextRequest) {
-  // Try to get accessToken from cookies first, then from localStorage via a helper
+  const { pathname } = request.nextUrl;
+
+  // Skip middleware entirely for public routes
+  if (publicRoutes.includes(pathname)) {
+    return NextResponse.next();
+  }
+
+  // Try to get token from cookies first
   let accessToken = request.cookies.get("accessToken")?.value;
   const refreshToken = request.cookies.get("refreshToken")?.value;
-  const { pathname } = request.nextUrl;
 
   console.log("=== MIDDLEWARE DEBUG ===");
   console.log("Pathname:", pathname);
   console.log("AccessToken from cookie:", accessToken ? "exists" : "undefined");
   console.log("RefreshToken from cookie:", refreshToken ? "exists" : "undefined");
+
+  // If no cookie, try to get from request header (sent by frontend)
+  if (!accessToken) {
+    const authHeader = request.headers.get("authorization");
+    if (authHeader?.startsWith("Bearer ")) {
+      accessToken = authHeader.substring(7);
+      console.log("AccessToken from header:", accessToken ? "exists" : "undefined");
+    }
+  }
 
   if (accessToken) {
     try {
@@ -28,11 +44,7 @@ export async function middleware(request: NextRequest) {
       );
       const { role } = payload as { role: string };
 
-      // If user is already authenticated, avoid showing login/register
-      if (publicRoutes.includes(pathname)) {
-        const dest = role === "SUPER_ADMIN" ? "/super-admin" : "/home";
-        return NextResponse.redirect(new URL(dest, request.url));
-      }
+      console.log("Token verified, role:", role);
 
       // Role-based route protection
       if (
@@ -52,8 +64,8 @@ export async function middleware(request: NextRequest) {
       return NextResponse.next();
     } catch (err) {
       console.error("Token verification failed:", err);
-
-      // Token might be expired or invalid → try refresh
+      
+      // Try to refresh token
       if (refreshToken) {
         try {
           const refreshResponse = await fetch(
@@ -68,18 +80,15 @@ export async function middleware(request: NextRequest) {
             }
           );
 
-          console.log("Refresh response status:", refreshResponse.status);
-
           if (refreshResponse.ok) {
             const data = await refreshResponse.json();
             const newAccessToken = data.accessToken;
-            console.log("Middleware got newAccessToken:", newAccessToken);
+            console.log("Token refreshed successfully");
 
             const response = NextResponse.next();
-            // Set new access token cookie
             response.cookies.set("accessToken", newAccessToken, {
               httpOnly: true,
-              secure: true,
+              secure: process.env.NODE_ENV === "production",
               sameSite: "lax",
               path: "/",
             });
@@ -90,7 +99,7 @@ export async function middleware(request: NextRequest) {
         }
       }
 
-      // If refresh fails or no refreshToken, redirect to login
+      // If refresh fails, redirect to login
       const resp = NextResponse.redirect(new URL("/auth/login", request.url));
       resp.cookies.delete("accessToken");
       resp.cookies.delete("refreshToken");
@@ -98,12 +107,9 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // No access token → if route is not public, redirect to login
-  if (!publicRoutes.includes(pathname)) {
-    return NextResponse.redirect(new URL("/auth/login", request.url));
-  }
-
-  return NextResponse.next();
+  // No access token at all — redirect to login
+  console.log("No access token found, redirecting to login");
+  return NextResponse.redirect(new URL("/auth/login", request.url));
 }
 
 export const config = {
