@@ -64,6 +64,11 @@ export const useAuthStore = create<AuthStore>()(
             email,
             password,
           });
+            console.log("=== FRONTEND LOGIN DEBUG ===");
+    console.log("Response status:", response.status);
+    console.log("Response headers:", response.headers);
+    console.log("Browser cookies:", document.cookie);
+    
 
           set({ isLoading: false, user: response.data.user });
           return true;
