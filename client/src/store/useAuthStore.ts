@@ -1,6 +1,7 @@
 // src/store/useAuthStore.ts
 import { API_ROUTES } from "@/utils/api";
 import { axiosInstance } from "@/lib/axios";
+import axios from "axios"
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
