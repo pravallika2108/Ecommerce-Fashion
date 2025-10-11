@@ -48,6 +48,7 @@ function LoginPage() {
       toast({
         title: "Login Successfull!",
       });
+      console.log(user)
       const user = useAuthStore.getState().user;
       if (user?.role === "SUPER_ADMIN") router.push("/super-admin");
       else router.push("/home");
