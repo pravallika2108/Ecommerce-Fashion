@@ -1,26 +1,24 @@
 // src/middleware.ts
-
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
 const publicRoutes = ["/auth/register", "/auth/login"];
 const superAdminRoutes = ["/super-admin", "/super-admin/:path*"];
 const userRoutes = ["/home"];
-
 const BACKEND_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ||
   "https://ecommerce-fashion-03io.onrender.com";
 
 export async function middleware(request: NextRequest) {
-  const accessToken = request.cookies.get("accessToken")?.value;
+  // Try to get accessToken from cookies first, then from localStorage via a helper
+  let accessToken = request.cookies.get("accessToken")?.value;
   const refreshToken = request.cookies.get("refreshToken")?.value;
   const { pathname } = request.nextUrl;
 
   console.log("=== MIDDLEWARE DEBUG ===");
-  console.log("Pathname:", request.nextUrl.pathname);
   console.log("Pathname:", pathname);
-  console.log("AccessToken:", accessToken ? "exists" : "undefined");
-  console.log("RefreshToken:", refreshToken ? "exists" : "undefined");
+  console.log("AccessToken from cookie:", accessToken ? "exists" : "undefined");
+  console.log("RefreshToken from cookie:", refreshToken ? "exists" : "undefined");
 
   if (accessToken) {
     try {
@@ -65,7 +63,6 @@ export async function middleware(request: NextRequest) {
               credentials: "include",
               headers: {
                 "Content-Type": "application/json",
-                // If backend expects the cookie via header, but normally credentials: include is enough
                 Cookie: `refreshToken=${refreshToken}`,
               },
             }
@@ -79,7 +76,6 @@ export async function middleware(request: NextRequest) {
             console.log("Middleware got newAccessToken:", newAccessToken);
 
             const response = NextResponse.next();
-
             // Set new access token cookie
             response.cookies.set("accessToken", newAccessToken, {
               httpOnly: true,
@@ -87,7 +83,6 @@ export async function middleware(request: NextRequest) {
               sameSite: "lax",
               path: "/",
             });
-
             return response;
           }
         } catch (refreshErr) {
@@ -103,7 +98,7 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // No access token at all — if route is not public, redirect to login
+  // No access token → if route is not public, redirect to login
   if (!publicRoutes.includes(pathname)) {
     return NextResponse.redirect(new URL("/auth/login", request.url));
   }
