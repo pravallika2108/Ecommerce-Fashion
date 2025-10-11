@@ -1,5 +1,4 @@
 "use client";
-
 import Image from "next/image";
 import banner from "../../../../public/images/banner2.jpg";
 import logo from "../../../../public/images/logo1.png";
@@ -31,9 +30,13 @@ function LoginPage() {
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    console.log("=== LOGIN FORM SUBMIT ===");
+    console.log("Form data:", formData);
+
     const checkFirstLevelOfValidation = await protectSignInAction(
       formData.email
     );
+    console.log("Validation result:", checkFirstLevelOfValidation);
 
     if (!checkFirstLevelOfValidation.success) {
       toast({
@@ -43,18 +46,34 @@ function LoginPage() {
       return;
     }
 
+    console.log("Calling login function...");
     const success = await login(formData.email, formData.password);
+    console.log("Login result:", success);
+
     if (success) {
       toast({
-        title: "Login Successfull!",
+        title: "Login Successful!",
       });
-      
+
       const user = useAuthStore.getState().user;
-       console.log(user)
-      if (user?.role === "SUPER_ADMIN") router.push("/super-admin");
-      else  router.push("/home");
+      console.log("User from store:", user);
+
+      if (user?.role === "SUPER_ADMIN") {
+        console.log("Redirecting to /super-admin");
+        router.push("/super-admin");
+      } else {
+        console.log("Redirecting to /home");
+        router.push("/home");
+      }
+    } else {
+      console.log("Login failed");
+      toast({
+        title: "Login failed",
+        variant: "destructive",
+      });
     }
   };
+
   return (
     <div className="min-h-screen bg-[#fff6f4] flex">
       <div className="hidden lg:block w-1/2 bg-[#ffede1] relative overflow-hidden">
@@ -73,7 +92,7 @@ function LoginPage() {
           </div>
           <form className="space-y-4" onSubmit={handleSubmit}>
             <div className="space-y-1">
-              <Label htmlFor="name">Email</Label>
+              <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 name="email"
@@ -86,7 +105,7 @@ function LoginPage() {
               />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="name">Password</Label>
+              <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
                 name="password"
@@ -101,8 +120,9 @@ function LoginPage() {
             <Button
               type="submit"
               className="w-full bg-black text-white hover:bg-black transition-colors"
+              disabled={isLoading}
             >
-              LOGIN
+              {isLoading ? "LOGGING IN..." : "LOGIN"}
             </Button>
             <p className="text-center text-[#3f3d56] text-sm">
               New here{" "}
