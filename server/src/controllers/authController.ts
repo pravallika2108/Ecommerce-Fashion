@@ -23,25 +23,26 @@ async function setTokens(
   accessToken: string,
   refreshToken: string
 ) {
-  // For cross-domain cookies to work, BOTH secure and sameSite: "none" are required
+  // Set cookies that will be sent to the frontend
   res.cookie("accessToken", accessToken, {
-    httpOnly: false,
-    secure: true, // MUST be true for HTTPS domains
-    sameSite: "none", // REQUIRED for cross-domain
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production", // true in production, false in development
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
     maxAge: 60 * 60 * 1000, // 1 hour
     path: "/",
   });
 
   res.cookie("refreshToken", refreshToken, {
-    httpOnly: false,
-    secure: true,
-    sameSite: "none",
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     path: "/",
   });
 
-  console.log("Cookies set: accessToken and refreshToken with sameSite=none, secure=true");
+  console.log("Cookies set successfully");
 }
+
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
     const { name, email, password } = req.body;
@@ -78,41 +79,44 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 export const login = async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, password } = req.body;
-    console.log("email-password",email,password)
+    console.log("Login attempt for email:", email);
+
     const extractCurrentUser = await prisma.user.findUnique({
       where: { email },
     });
-    console.log(extractCurrentUser)
+
     if (
       !extractCurrentUser ||
       !(await bcrypt.compare(password, extractCurrentUser.password))
     ) {
       res.status(401).json({
         success: false,
-        error: "Invalied credentials",
+        error: "Invalid credentials",
       });
-
       return;
     }
-    //create our access and refreshtoken
+
+    // Generate tokens
     const { accessToken, refreshToken } = generateToken(
       extractCurrentUser.id,
       extractCurrentUser.email,
       extractCurrentUser.role
     );
 
-    //set out tokens
+    // Set cookies
     await setTokens(res, accessToken, refreshToken);
-    console.log("=== BACKEND LOGIN DEBUG ===");
-    console.log("Response headers before sending:", res.getHeaders());
-    console.log("Set-Cookie header:", res.getHeaders()["set-cookie"]);
-     await prisma.user.update({
+
+    // Update user with refresh token in DB
+    await prisma.user.update({
       where: { id: extractCurrentUser.id },
-      data: { refreshToken: refreshToken }
+      data: { refreshToken: refreshToken },
     });
+
+    console.log("Login successful for user:", extractCurrentUser.id);
+
     res.status(200).json({
       success: true,
-      message: "Login successfully",
+      message: "Login successful",
       user: {
         id: extractCurrentUser.id,
         name: extractCurrentUser.name,
@@ -120,7 +124,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
         role: extractCurrentUser.role,
       },
       accessToken,
-      refreshToken
+      refreshToken,
     });
   } catch (error) {
     console.error(error);
@@ -138,6 +142,7 @@ export const refreshAccessToken = async (
       success: false,
       error: "Invalid refresh token",
     });
+    return;
   }
 
   try {
@@ -160,11 +165,20 @@ export const refreshAccessToken = async (
       user.email,
       user.role
     );
-    //set out tokens
+
+    // Set new tokens
     await setTokens(res, accessToken, newRefreshToken);
+
+    // Update refresh token in DB
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { refreshToken: newRefreshToken },
+    });
+
     res.status(200).json({
       success: true,
-      message: "Refresh token refreshed successfully",
+      message: "Token refreshed successfully",
+      accessToken,
     });
   } catch (error) {
     console.error(error);
