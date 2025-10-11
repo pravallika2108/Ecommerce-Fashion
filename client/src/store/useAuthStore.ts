@@ -2,6 +2,7 @@ import { API_ROUTES } from "@/utils/api";
 import axios from "axios";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import Cookies from "js-cookie"; // 👈 We'll use this for middleware visibility (optional)
 
 type User = {
   id: string;
@@ -12,6 +13,8 @@ type User = {
 
 type AuthStore = {
   user: User | null;
+  accessToken: string | null;
+  refreshToken: string | null;
   isLoading: boolean;
   error: string | null;
   register: (
@@ -21,91 +24,139 @@ type AuthStore = {
   ) => Promise<string | null>;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
-  refreshAccessToken: () => Promise<Boolean>;
+  refreshAccessToken: () => Promise<boolean>;
 };
-
-const axiosInstance = axios.create({
-  baseURL: API_ROUTES.AUTH,
-  withCredentials: true,
-});
 
 export const useAuthStore = create<AuthStore>()(
   persist(
-    (set, get) => ({
-      user: null,
-      isLoading: false,
-      error: null,
-      register: async (name, email, password) => {
-        set({ isLoading: true, error: null });
-        try {
-          const response = await axiosInstance.post("/register", {
-            name,
-            email,
-            password,
-          });
+    (set, get) => {
+      const axiosInstance = axios.create({
+        baseURL: API_ROUTES.AUTH,
+      });
 
-          set({ isLoading: false });
-          return response.data.userId;
-        } catch (error) {
-          set({
-            isLoading: false,
-            error: axios.isAxiosError(error)
-              ? error?.response?.data?.error || "Registration failed"
-              : "Registration failed",
-          });
+      // Add accessToken to Authorization header
+      axiosInstance.interceptors.request.use((config) => {
+        const token = get().accessToken;
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+      });
 
-          return null;
-        }
-      },
-      login: async (email, password) => {
-        set({ isLoading: true, error: null });
-        try {
-          const response = await axiosInstance.post("/login", {
-            email,
-            password,
-          });
-          console.log(response.data.accessToken);
+      return {
+        user: null,
+        accessToken: null,
+        refreshToken: null,
+        isLoading: false,
+        error: null,
 
-          set({ isLoading: false, user: response.data.user });
-          return true;
-        } catch (error) {
-          set({
-            isLoading: false,
-            error: axios.isAxiosError(error)
-              ? error?.response?.data?.error || "Login failed"
-              : "Login failed",
-          });
+        register: async (name, email, password) => {
+          set({ isLoading: true, error: null });
+          try {
+            const response = await axiosInstance.post("/register", {
+              name,
+              email,
+              password,
+            });
 
-          return false;
-        }
-      },
-      logout: async () => {
-        set({ isLoading: true, error: null });
-        try {
-          await axiosInstance.post("/logout");
-          set({ user: null, isLoading: false });
-        } catch (error) {
-          set({
-            isLoading: false,
-            error: axios.isAxiosError(error)
-              ? error?.response?.data?.error || "Logout failed"
-              : "Logout failed",
-          });
-        }
-      },
-      refreshAccessToken: async () => {
-        try {
-          await axiosInstance.post("/refresh-token");
-          return true;
-        } catch (e) {
-          console.error(e);
-          return false;
-        }
-      },
-    }),
+            set({ isLoading: false });
+            return response.data.userId;
+          } catch (error) {
+            set({
+              isLoading: false,
+              error: axios.isAxiosError(error)
+                ? error?.response?.data?.error || "Registration failed"
+                : "Registration failed",
+            });
+            return null;
+          }
+        },
+
+        login: async (email, password) => {
+          set({ isLoading: true, error: null });
+          try {
+            const response = await axiosInstance.post("/login", {
+              email,
+              password,
+            });
+
+            const { user, accessToken, refreshToken } = response.data;
+
+            // 👇 Optional: Set cookie so middleware can read it
+            Cookies.set("client-token", accessToken, { path: "/", secure: true, sameSite: "None" });
+
+            set({
+              isLoading: false,
+              user,
+              accessToken,
+              refreshToken,
+            });
+
+            return true;
+          } catch (error) {
+            set({
+              isLoading: false,
+              error: axios.isAxiosError(error)
+                ? error?.response?.data?.error || "Login failed"
+                : "Login failed",
+            });
+            return false;
+          }
+        },
+
+        logout: async () => {
+          try {
+            await axiosInstance.post("/logout");
+
+            // Remove client-token cookie
+            Cookies.remove("client-token");
+
+            set({
+              user: null,
+              accessToken: null,
+              refreshToken: null,
+              isLoading: false,
+            });
+          } catch (error) {
+            set({
+              isLoading: false,
+              error: axios.isAxiosError(error)
+                ? error?.response?.data?.error || "Logout failed"
+                : "Logout failed",
+            });
+          }
+        },
+
+        refreshAccessToken: async () => {
+          try {
+            const { refreshToken } = get();
+            if (!refreshToken) return false;
+
+            const response = await axiosInstance.post("/refresh-token", {
+              refreshToken,
+            });
+
+            const { accessToken } = response.data;
+
+            // Update access token and reset cookie
+            Cookies.set("client-token", accessToken, { path: "/", secure: true, sameSite: "None" });
+
+            set({ accessToken });
+            return true;
+          } catch (error) {
+            console.error("Refresh token error", error);
+            return false;
+          }
+        },
+      };
+    },
     {
       name: "auth-storage",
-      partialize: (state) => ({ user: state.user }),
+      partialize: (state) => ({
+        user: state.user,
+        accessToken: state.accessToken,
+        refreshToken: state.refreshToken,
+      }),
     }
   )
 );
