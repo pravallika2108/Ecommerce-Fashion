@@ -6,23 +6,31 @@ const superAdminRoutes = ["/super-admin", "/super-admin/:path*"];
 const userRoutes = ["/home"];
 
 export async function middleware(request: NextRequest) {
-  const accessToken = request.cookies.get("accessToken")?.value;
+  // 1. Read access token from Authorization header Bearer token
+  const authHeader = request.headers.get("authorization") || "";
+  const accessToken = authHeader.startsWith("Bearer ")
+    ? authHeader.substring(7)
+    : null;
+
   const { pathname } = request.nextUrl;
 
   if (accessToken) {
     try {
+      // Verify access token
       const { payload } = await jwtVerify(
         accessToken,
         new TextEncoder().encode(process.env.JWT_SECRET!)
       );
       const { role } = payload as { role: string };
 
+      // Redirect logged-in users away from public routes
       if (publicRoutes.includes(pathname)) {
         return NextResponse.redirect(
           new URL(role === "SUPER_ADMIN" ? "/super-admin" : "/home", request.url)
         );
       }
 
+      // Role based redirects
       if (
         role === "SUPER_ADMIN" &&
         userRoutes.some((route) => pathname.startsWith(route))
@@ -37,15 +45,16 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(new URL("/home", request.url));
       }
 
+      // All good, continue
       return NextResponse.next();
     } catch (e) {
       console.error("Access token verification failed", e);
 
-      // 🔄 Try to refresh the token
+      // Try to refresh the token using refresh token cookie
       try {
         const refreshResponse = await fetch(`${request.nextUrl.origin}/auth/refresh-token`, {
           method: "POST",
-          credentials: "include",
+          credentials: "include", // sends cookies (refresh token)
           headers: {
             "Content-Type": "application/json",
           },
@@ -56,6 +65,7 @@ export async function middleware(request: NextRequest) {
           const newAccessToken = data.accessToken;
 
           const response = NextResponse.next();
+          // Set the new access token as a cookie (HttpOnly)
           response.cookies.set("accessToken", newAccessToken, {
             httpOnly: true,
             secure: true,
@@ -68,7 +78,7 @@ export async function middleware(request: NextRequest) {
         console.error("Refresh token failed", refreshError);
       }
 
-      // 🔐 Redirect to login if refresh fails
+      // If refresh fails, redirect to login and clear cookies
       const resp = NextResponse.redirect(new URL("/auth/login", request.url));
       resp.cookies.delete("accessToken");
       resp.cookies.delete("refreshToken");
@@ -76,11 +86,12 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // 🚫 No token and not on a public route? Redirect to login
+  // No access token in header & not on public route, redirect to login
   if (!publicRoutes.includes(pathname)) {
     return NextResponse.redirect(new URL("/auth/login", request.url));
   }
 
+  // Public route, allow access
   return NextResponse.next();
 }
 
