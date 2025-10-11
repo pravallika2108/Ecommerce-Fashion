@@ -106,6 +106,8 @@ export const login = async (req: Request, res: Response): Promise<void> => {
         email: extractCurrentUser.email,
         role: extractCurrentUser.role,
       },
+      accessToken,
+      refreshToken
     });
   } catch (error) {
     console.error(error);
