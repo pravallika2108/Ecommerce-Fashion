@@ -1,5 +1,4 @@
 // src/store/useAuthStore.ts
-
 import { API_ROUTES } from "@/utils/api";
 import axios from "axios";
 import { create } from "zustand";
@@ -15,6 +14,7 @@ type User = {
 type AuthStore = {
   user: User | null;
   accessToken: string | null;
+  refreshToken: string | null;
   isLoading: boolean;
   error: string | null;
   register: (name: string, email: string, password: string) => Promise<string | null>;
@@ -25,7 +25,7 @@ type AuthStore = {
 
 const axiosInstance = axios.create({
   baseURL: API_ROUTES.AUTH,
-  withCredentials: true, // so that cookies are sent in requests
+  withCredentials: true,
 });
 
 export const useAuthStore = create<AuthStore>()(
@@ -33,6 +33,7 @@ export const useAuthStore = create<AuthStore>()(
     (set, get) => ({
       user: null,
       accessToken: null,
+      refreshToken: null,
       isLoading: false,
       error: null,
 
@@ -65,22 +66,24 @@ export const useAuthStore = create<AuthStore>()(
             email,
             password,
           });
-
           console.log("=== FRONTEND LOGIN DEBUG ===");
-          console.log("Response status:", response.status);
           console.log("Response data:", response.data);
-          console.log("Response headers:", response.headers);
 
-          const { user, accessToken } = response.data;
-             localStorage.setItem("accessToken", response.data.accessToken);
-             localStorage.setItem("refreshToken", response.data.refreshToken);
+          const { user, accessToken, refreshToken } = response.data;
 
-          console.log(accessToken);
+          // Store tokens in both localStorage and zustand state
+          if (accessToken) {
+            localStorage.setItem("accessToken", accessToken);
+          }
+          if (refreshToken) {
+            localStorage.setItem("refreshToken", refreshToken);
+          }
 
           set({
             isLoading: false,
             user,
-            accessToken: accessToken ?? null,
+            accessToken: accessToken || null,
+            refreshToken: refreshToken || null,
           });
 
           return true;
@@ -100,7 +103,9 @@ export const useAuthStore = create<AuthStore>()(
         set({ isLoading: true });
         try {
           await axiosInstance.post("/logout");
-          set({ user: null, accessToken: null, isLoading: false });
+          localStorage.removeItem("accessToken");
+          localStorage.removeItem("refreshToken");
+          set({ user: null, accessToken: null, refreshToken: null, isLoading: false });
         } catch (err) {
           set({
             isLoading: false,
@@ -116,13 +121,14 @@ export const useAuthStore = create<AuthStore>()(
         try {
           const response = await axiosInstance.post("/refresh-token");
           console.log("FRONTEND REFRESH DEBUG:", response.data);
+
           const { accessToken } = response.data;
           if (accessToken) {
+            localStorage.setItem("accessToken", accessToken);
             set({ accessToken });
             return true;
-          } else {
-            return false;
           }
+          return false;
         } catch (err) {
           console.error("Refresh token error frontend:", err);
           return false;
@@ -134,8 +140,8 @@ export const useAuthStore = create<AuthStore>()(
       partialize: (state) => ({
         user: state.user,
         accessToken: state.accessToken,
+        refreshToken: state.refreshToken,
       }),
     }
   )
 );
-
