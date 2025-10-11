@@ -1,4 +1,3 @@
-// useAuthStore.ts
 import { API_ROUTES } from "@/utils/api";
 import axios from "axios";
 import { create } from "zustand";
@@ -13,38 +12,29 @@ type User = {
 
 type AuthStore = {
   user: User | null;
-  accessToken: string | null;
   isLoading: boolean;
   error: string | null;
-  register: (name: string, email: string, password: string) => Promise<string | null>;
+  register: (
+    name: string,
+    email: string,
+    password: string
+  ) => Promise<string | null>;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
-  refreshAccessToken: () => Promise<boolean>;
+  refreshAccessToken: () => Promise<Boolean>;
 };
 
 const axiosInstance = axios.create({
   baseURL: API_ROUTES.AUTH,
-  withCredentials: true, // Important for refresh token cookie
-});
-
-// Inject access token into requests
-axiosInstance.interceptors.request.use((config) => {
-  const token = useAuthStore.getState().accessToken;
-  if (token) {
-    config.headers = config.headers ?? {};
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
+  withCredentials: true,
 });
 
 export const useAuthStore = create<AuthStore>()(
   persist(
     (set, get) => ({
       user: null,
-      accessToken: null,
       isLoading: false,
       error: null,
-
       register: async (name, email, password) => {
         set({ isLoading: true, error: null });
         try {
@@ -53,6 +43,7 @@ export const useAuthStore = create<AuthStore>()(
             email,
             password,
           });
+
           set({ isLoading: false });
           return response.data.userId;
         } catch (error) {
@@ -62,10 +53,10 @@ export const useAuthStore = create<AuthStore>()(
               ? error?.response?.data?.error || "Registration failed"
               : "Registration failed",
           });
+
           return null;
         }
       },
-
       login: async (email, password) => {
         set({ isLoading: true, error: null });
         try {
@@ -74,8 +65,7 @@ export const useAuthStore = create<AuthStore>()(
             password,
           });
 
-          const { accessToken, user } = response.data;
-          set({ user, accessToken, isLoading: false });
+          set({ isLoading: false, user: response.data.user });
           return true;
         } catch (error) {
           set({
@@ -84,15 +74,15 @@ export const useAuthStore = create<AuthStore>()(
               ? error?.response?.data?.error || "Login failed"
               : "Login failed",
           });
+
           return false;
         }
       },
-
       logout: async () => {
-        set({ isLoading: true });
+        set({ isLoading: true, error: null });
         try {
           await axiosInstance.post("/logout");
-          set({ user: null, accessToken: null, isLoading: false });
+          set({ user: null, isLoading: false });
         } catch (error) {
           set({
             isLoading: false,
@@ -102,30 +92,20 @@ export const useAuthStore = create<AuthStore>()(
           });
         }
       },
-
       refreshAccessToken: async () => {
         try {
-          const response = await axiosInstance.post("/refresh-token");
-          const newAccessToken = response.data.accessToken;
-          if (newAccessToken) {
-            set({ accessToken: newAccessToken });
-            return true;
-          }
-          return false;
+          await axiosInstance.post("/refresh-token");
+          return true;
         } catch (e) {
-          console.error("Refresh token error", e);
+          console.error(e);
           return false;
         }
       },
     }),
     {
       name: "auth-storage",
-      partialize: (state) => ({
-        user: state.user,
-        accessToken: state.accessToken,
-      }),
+      partialize: (state) => ({ user: state.user }),
     }
   )
 );
-
 
