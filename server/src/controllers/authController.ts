@@ -25,7 +25,7 @@ async function setTokens(
 ) {
   // For cross-domain cookies to work, BOTH secure and sameSite: "none" are required
   res.cookie("accessToken", accessToken, {
-    httpOnly: true,
+    httpOnly: false,
     secure: true, // MUST be true for HTTPS domains
     sameSite: "none", // REQUIRED for cross-domain
     maxAge: 60 * 60 * 1000, // 1 hour
@@ -33,7 +33,7 @@ async function setTokens(
   });
 
   res.cookie("refreshToken", refreshToken, {
-    httpOnly: true,
+    httpOnly: false,
     secure: true,
     sameSite: "none",
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
