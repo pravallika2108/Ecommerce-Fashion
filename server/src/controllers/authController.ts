@@ -76,7 +76,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     const extractCurrentUser = await prisma.user.findUnique({
       where: { email },
     });
-
+    console.log(extractCurrentUser)
     if (
       !extractCurrentUser ||
       !(await bcrypt.compare(password, extractCurrentUser.password))
