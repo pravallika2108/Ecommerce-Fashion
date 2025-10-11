@@ -69,26 +69,30 @@ function ProductDetailsContent({ id }: { id: string }) {
                 <button
                   onClick={() => setSelectedImage(index)}
                   key={index}
-                  className={`${
+                  className={`aspect-square bg-white border-2 overflow-hidden ${
                     selectedImage === index
                       ? "border-black"
-                      : "border-transparent"
-                  } border-2`}
+                      : "border-gray-200"
+                  }`}
                 >
-                  <img
-                    src={image}
-                    alt={`Product-${index + 1}`}
-                    className="w-full aspect-square object-cover"
-                  />
+                  <div className="w-full h-full p-2">
+                    <img
+                      src={image}
+                      alt={`Product-${index + 1}`}
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
                 </button>
               ))}
             </div>
-            <div className="flex-1 relative w-[300px]">
-              <img
-                src={product.images[selectedImage]}
-                alt={product.name}
-                className="w-full h-full object-cover"
-              />
+            <div className="flex-1 aspect-square bg-white border overflow-hidden">
+              <div className="w-full h-full p-12">
+                <img
+                  src={product.images[selectedImage]}
+                  alt={product.name}
+                  className="w-full h-full object-contain"
+                />
+              </div>
             </div>
           </div>
           <div className="lg:w-1/3 space-y-6">

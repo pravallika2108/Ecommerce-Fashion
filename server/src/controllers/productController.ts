@@ -11,6 +11,8 @@ export const createProduct = async (
   res: Response
 ): Promise<void> => {
   try {
+    console.log("Files received:", req.files);  // <-- check this
+    console.log("Request body:", req.body);    
     const {
       name,
       brand,

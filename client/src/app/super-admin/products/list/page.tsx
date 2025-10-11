@@ -70,14 +70,14 @@ function SuperAdminProductListingPage() {
                   <TableRow key={product.id}>
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        <div className=" rounded-l bg-gray-100 overflow-hidden">
+                        <div className="w-16 h-16 flex-shrink-0 rounded bg-white border overflow-hidden">
                           {product.images[0] && (
                             <Image
                               src={product.images[0]}
                               alt="product image"
-                              width={60}
-                              height={60}
-                              className="object-cover w-full h=full"
+                              width={64}
+                              height={64}
+                              className="w-full h-full object-contain p-1"
                             />
                           )}
                         </div>

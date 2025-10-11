@@ -16,7 +16,6 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
-  SheetTrigger,
 } from "../ui/sheet";
 import { useEffect, useState } from "react";
 import { useCartStore } from "@/store/useCartStore";
@@ -118,7 +117,7 @@ function Header() {
                 className="w-full justify-start"
               >
                 <ShoppingBag className="mr-1 h-4 w-4" />
-                Cart (2)
+                Cart ({items?.length || 0})
               </Button>
             </div>
           </div>
@@ -127,12 +126,20 @@ function Header() {
   };
 
   return (
-    <header className="sticky bg-white  top-0 z-50 shadow-sm">
+    <header className="sticky bg-white top-0 z-50 shadow-sm">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-20">
-          <Link className="text-2xl font-bold" href="/">
-            ECOMMERCE
+          {/* ✅ CHANGE THIS - Replace ECOMMERCE with ShopVibe branding */}
+          <Link href="/" className="flex items-center gap-2">
+            <ShoppingBag className="w-7 h-7 text-indigo-600" />
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">
+                Shop<span className="text-indigo-600">Vibe</span>
+              </h1>
+              <p className="text-xs text-gray-500 hidden sm:block">Your Style, Your Vibe</p>
+            </div>
           </Link>
+
           <div className="hidden lg:flex items-center space-x-8 flex-1 justify-center">
             <nav className="flex items-center space-x-8">
               {navItems.map((item, index) => (
@@ -146,6 +153,7 @@ function Header() {
               ))}
             </nav>
           </div>
+
           <div className="hidden lg:flex items-center space-x-4">
             <div
               className="relative cursor-pointer"
@@ -172,6 +180,7 @@ function Header() {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
+
           <div className="lg:hidden">
             <Sheet
               open={showSheetDialog}
@@ -189,7 +198,11 @@ function Header() {
               </Button>
               <SheetContent side="left" className="w-80">
                 <SheetHeader>
-                  <SheetTitle>ECOMMERCE</SheetTitle>
+                  {/* ✅ CHANGE THIS - Mobile menu title */}
+                  <SheetTitle className="flex items-center gap-2">
+                    <ShoppingBag className="w-6 h-6 text-indigo-600" />
+                    <span>ShopVibe</span>
+                  </SheetTitle>
                 </SheetHeader>
                 {renderMobileMenuItems()}
               </SheetContent>

@@ -18,4 +18,4 @@ export const colors = [
   { name: "Cyan", class: "bg-[#06B6D4]" },
   { name: "Blue", class: "bg-[#3B82F6]" },
 ];
-export const brands = ["Nike", "Adidas", "Puma", "Reebok", "Under Armour"];
+export const brands = ["Zeviora", "Quivano", "Trevico", "Fynsera", "Sylvora"];

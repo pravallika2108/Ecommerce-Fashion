@@ -276,14 +276,16 @@ function ProductListingPage() {
                   <div
                     onClick={() => router.push(`/listing/${productItem.id}`)}
                     key={productItem.id}
-                    className="group"
+                    className="group cursor-pointer"
                   >
-                    <div className="relative aspect-[3/4] mb-4 bg-gray-100 overflow-hidden">
-                      <img
-                        src={productItem.images[0]}
-                        alt={productItem.name}
-                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-                      />
+                    <div className="relative aspect-square mb-4 bg-white border overflow-hidden">
+                      <div className="w-full h-full p-6">
+                        <img
+                          src={productItem.images[0]}
+                          alt={productItem.name}
+                          className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105"
+                        />
+                      </div>
                       <div className="absolute inset-0 bg-black bg-opacity-20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
                         <Button className="bg-white text-black hover:bg-gray-100">
                           Quick View

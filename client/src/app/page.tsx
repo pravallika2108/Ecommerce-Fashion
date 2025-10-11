@@ -53,6 +53,7 @@ function HomePage() {
 
   return (
     <div className="min-h-screen bg-white">
+      {/* Hero Banner Section */}
       <section className="relative h-[600px] overflow-hidden">
         {banners.map((bannerItem, index) => (
           <div
@@ -71,18 +72,19 @@ function HomePage() {
             </div>
             <div className="relative h-full container mx-auto px-4 flex items-center">
               <div className="text-white space-y-6">
+                {/* ✅ UPDATED - ShopVibe branding */}
                 <span className="text-sm uppercase tracking-wider">
-                  I AM JOHN
+                  WELCOME TO SHOPVIBE
                 </span>
                 <h1 className="text-5xl lg:text-7xl font-bold leading-tight">
-                  BEST SELLING
+                  YOUR STYLE
                   <br />
-                  E-COMMERCE WEBSITE
+                  YOUR VIBE
                 </h1>
                 <p className="text-lg">
-                  A Creative, Flexible , Clean, Easy to use and
+                  Discover fashion and accessories that match your unique style.
                   <br />
-                  High Performance E-Commerce Theme
+                  Shop clothing, watches, sunglasses, and more.
                 </p>
                 <Button className="bg-white text-black hover:bg-gray-100 px-8 py-6 text-lg">
                   SHOP NOW
@@ -106,7 +108,7 @@ function HomePage() {
         </div>
       </section>
 
-      {/* grid section */}
+      {/* Grid Section */}
       <section className="py-16">
         <div className="container mx-auto px-4">
           <h2 className="text-center text-3xl font-semibold mb-2">
@@ -142,7 +144,7 @@ function HomePage() {
         </div>
       </section>
 
-      {/* Feature products section */}
+      {/* Featured Products Section */}
       <section className="py-16">
         <div className="container mx-auto px-4">
           <h2 className="text-center text-3xl font-semibold mb-2">
@@ -168,7 +170,7 @@ function HomePage() {
                     </h3>
                     <p className="text-sm">{productItem.price}</p>
                     <Button className="mt-4 bg-white text-black hover:bg-gray-100">
-                      QUICK ViEW
+                      QUICK VIEW
                     </Button>
                   </div>
                 </div>
