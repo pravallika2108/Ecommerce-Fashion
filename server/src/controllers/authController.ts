@@ -80,6 +80,12 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 export const login = async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, password } = req.body;
+    
+    console.log("=== LOGIN ATTEMPT ===");
+    console.log("Email:", email);
+    console.log("Origin:", req.headers.origin);
+    console.log("NODE_ENV:", process.env.NODE_ENV);
+    
     const extractCurrentUser = await prisma.user.findUnique({
       where: { email },
     });
@@ -102,15 +108,23 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       extractCurrentUser.role
     );
 
-    // CRITICAL FIX: Save refresh token to database
+    console.log("Tokens generated successfully");
+
+    // Save refresh token to database
     await prisma.user.update({
       where: { id: extractCurrentUser.id },
       data: { refreshToken },
     });
 
-    // Set cookies
-    await setTokens(res, accessToken, refreshToken);
+    console.log("Refresh token saved to database");
+
+    // Set cookies - THIS MUST HAPPEN BEFORE res.json()
+    setTokens(res, accessToken, refreshToken);
     
+    console.log("Cookies set in response");
+    console.log("✅ Login successful for:", email);
+    
+    // Send response - tokens are in httpOnly cookies only
     res.status(200).json({
       success: true,
       message: "Login successful",
@@ -120,12 +134,10 @@ export const login = async (req: Request, res: Response): Promise<void> => {
         email: extractCurrentUser.email,
         role: extractCurrentUser.role,
       },
-      // OPTIONAL: Include tokens in response for frontend state
-      accessToken,
-      refreshToken,
+      // DO NOT include tokens in JSON - they're in cookies
     });
   } catch (error) {
-    console.error(error);
+    console.error("❌ Login error:", error);
     res.status(500).json({ 
       success: false,
       error: "Login failed" 
