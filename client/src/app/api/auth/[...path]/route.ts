@@ -3,121 +3,86 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://ecommerce-fashion-03io.onrender.com';
 
-async function proxyRequest(
-  method: string,
-  pathArray: string[],
-  request: NextRequest
-) {
+export async function GET(request: NextRequest) {
+  return proxyRequest('GET', request);
+}
+
+export async function POST(request: NextRequest) {
+  return proxyRequest('POST', request);
+}
+
+export async function PUT(request: NextRequest) {
+  return proxyRequest('PUT', request);
+}
+
+export async function DELETE(request: NextRequest) {
+  return proxyRequest('DELETE', request);
+}
+
+export async function PATCH(request: NextRequest) {
+  return proxyRequest('PATCH', request);
+}
+
+async function proxyRequest(method: string, request: NextRequest) {
   try {
-    const pathStr = pathArray.join('/');
-    const url = `${BACKEND_URL}/api/${pathStr}`;
-    
-    console.log(`\n=== PROXY REQUEST ===`);
-    console.log(`Method: ${method}`);
-    console.log(`Path: ${pathStr}`);
-    console.log(`Full URL: ${url}`);
+    // Extract the path after /api/
+    const path = request.nextUrl.pathname.replace('/api/', '');
+    const searchParams = request.nextUrl.searchParams.toString();
+    const backendUrl = `${BACKEND_URL}/api/${path}${searchParams ? `?${searchParams}` : ''}`;
 
+    console.log(`[PROXY] ${method} /api/${path} -> ${backendUrl}`);
+
+    // Get request body if it exists
     let body = null;
-    const contentType = request.headers.get('content-type');
-
-    if (method !== 'GET' && method !== 'HEAD' && contentType?.includes('application/json')) {
-      try {
-        body = await request.json();
-        console.log(`Request Body:`, body);
-      } catch (e) {
-        console.log(`No JSON body`);
-      }
+    if (method !== 'GET' && method !== 'DELETE') {
+      body = await request.text();
     }
 
-    const backendResponse = await fetch(url, {
+    // Forward the request to backend
+    const response = await fetch(backendUrl, {
       method,
       headers: {
         'Content-Type': 'application/json',
+        // Forward any authorization headers if present
         ...(request.headers.get('authorization') && {
-          'Authorization': request.headers.get('authorization')!,
+          'Authorization': request.headers.get('authorization')!
         }),
       },
-      body: body ? JSON.stringify(body) : undefined,
+      body: body || undefined,
+      credentials: 'include',
     });
 
-    console.log(`Backend Response Status: ${backendResponse.status}`);
+    // Get response data
+    const data = await response.text();
+
+    // Extract cookies from backend response
+    const setCookieHeaders = response.headers.getSetCookie();
     
-    let responseData;
-    try {
-      responseData = await backendResponse.json();
-      console.log(`Response:`, responseData);
-    } catch (e) {
-      const text = await backendResponse.text();
-      console.log(`Response (text):`, text);
-      responseData = text;
+    console.log(`[PROXY] Backend response: ${response.status}`);
+    if (setCookieHeaders.length > 0) {
+      console.log(`[PROXY] Setting ${setCookieHeaders.length} cookies`);
     }
 
-    // Create response
-    const response = NextResponse.json(responseData, {
-      status: backendResponse.status,
+    // Create response with same status and data
+    const proxyResponse = new NextResponse(data, {
+      status: response.status,
+      headers: {
+        'Content-Type': 'application/json',
+      },
     });
 
-    // ✅ Forward Set-Cookie headers
-    const setCookieHeaders = backendResponse.headers.getSetCookie();
-    if (setCookieHeaders && setCookieHeaders.length > 0) {
-      setCookieHeaders.forEach((cookie) => {
-        response.headers.append('Set-Cookie', cookie);
-      });
-      console.log(`✅ Forwarded ${setCookieHeaders.length} cookies`);
-    }
+    // Forward all Set-Cookie headers to frontend domain
+    setCookieHeaders.forEach(cookie => {
+      proxyResponse.headers.append('Set-Cookie', cookie);
+    });
 
-    console.log(`=== PROXY RESPONSE ===\n`);
-    return response;
+    return proxyResponse;
+
   } catch (error) {
-    console.error('❌ PROXY ERROR:', error);
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('[PROXY] Error:', error);
     return NextResponse.json(
-      { 
-        success: false, 
-        error: 'Proxy request failed',
-        details: errorMessage 
-      },
+      { error: 'Proxy request failed', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 502 }
     );
   }
-}
-
-export async function GET(
-  request: NextRequest,
-  context: { params: Promise<{ path: string[] }> }
-) {
-  const { path } = await context.params;
-  return proxyRequest('GET', path, request);
-}
-
-export async function POST(
-  request: NextRequest,
-  context: { params: Promise<{ path: string[] }> }
-) {
-  const { path } = await context.params;
-  return proxyRequest('POST', path, request);
-}
-
-export async function PUT(
-  request: NextRequest,
-  context: { params: Promise<{ path: string[] }> }
-) {
-  const { path } = await context.params;
-  return proxyRequest('PUT', path, request);
-}
-
-export async function DELETE(
-  request: NextRequest,
-  context: { params: Promise<{ path: string[] }> }
-) {
-  const { path } = await context.params;
-  return proxyRequest('DELETE', path, request);
-}
-
-export async function PATCH(
-  request: NextRequest,
-  context: { params: Promise<{ path: string[] }> }
-) {
-  const { path } = await context.params;
-  return proxyRequest('PATCH', path, request);
 }
