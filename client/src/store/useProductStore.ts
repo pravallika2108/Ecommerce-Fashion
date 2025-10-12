@@ -1,5 +1,5 @@
 import { API_ROUTES } from "@/utils/api";
-import axios from "axios";
+import { axiosInstance } from "@/lib/axios";
 import { create } from "zustand";
 
 export interface Product {
@@ -45,89 +45,72 @@ interface ProductState {
   setCurrentPage: (page: number) => void;
 }
 
-export const useProductStore = create<ProductState>((set, get) => ({
+export const useProductStore = create<ProductState>((set) => ({
   products: [],
   isLoading: true,
   error: null,
   currentPage: 1,
   totalPages: 1,
   totalProducts: 0,
+  
   fetchAllProductsForAdmin: async () => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axios.get(
-        `${API_ROUTES.PRODUCTS}/fetch-admin-products`,
-        {
-          withCredentials: true,
-        }
-      );
-
+      const response = await axiosInstance.get("/products/fetch-admin-products");
       set({ products: response.data, isLoading: false });
     } catch (e) {
       set({ error: "Failed to fetch product", isLoading: false });
     }
   },
+
   createProduct: async (productData: FormData) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axios.post(
-        `${API_ROUTES.PRODUCTS}/create-new-product`,
-        productData,
-        {
-          withCredentials: true,
-         
-        }
-      );
+      const response = await axiosInstance.post("/products/create-new-product", productData);
       set({ isLoading: false });
       return response.data;
     } catch (e) {
       set({ error: "Failed to create product", isLoading: false });
+      throw e;
     }
   },
+
   updateProduct: async (id: string, productData: FormData) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axios.put(
-        `${API_ROUTES.PRODUCTS}/${id}`,
-        productData,
-        {
-          withCredentials: true,
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const response = await axiosInstance.put(`/products/${id}`, productData);
       set({ isLoading: false });
       return response.data;
     } catch (e) {
-      set({ error: "Failed to create product", isLoading: false });
+      set({ error: "Failed to update product", isLoading: false });
+      throw e;
     }
   },
+
   deleteProduct: async (id: string) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axios.delete(`${API_ROUTES.PRODUCTS}/${id}`, {
-        withCredentials: true,
-      });
+      const response = await axiosInstance.delete(`/products/${id}`);
       set({ isLoading: false });
       return response.data.success;
     } catch (e) {
-      set({ error: "Failed to create product", isLoading: false });
+      set({ error: "Failed to delete product", isLoading: false });
+      throw e;
     }
   },
+
   getProductById: async (id: string) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axios.get(`${API_ROUTES.PRODUCTS}/${id}`, {
-        withCredentials: true,
-      });
+      const response = await axiosInstance.get(`/products/${id}`);
       set({ isLoading: false });
       return response.data;
     } catch (e) {
-      set({ error: "Failed to create product", isLoading: false });
+      set({ error: "Failed to fetch product", isLoading: false });
       return null;
     }
   },
+
   fetchProductsForClient: async (params) => {
     set({ isLoading: true, error: null });
     try {
@@ -139,13 +122,9 @@ export const useProductStore = create<ProductState>((set, get) => ({
         brands: params.brands?.join(","),
       };
 
-      const response = await axios.get(
-        `${API_ROUTES.PRODUCTS}/fetch-client-products`,
-        {
-          params: queryParams,
-          withCredentials: true,
-        }
-      );
+      const response = await axiosInstance.get("/products/fetch-client-products", {
+        params: queryParams,
+      });
 
       set({
         products: response.data.products,
@@ -158,5 +137,6 @@ export const useProductStore = create<ProductState>((set, get) => ({
       set({ error: "Failed to fetch products", isLoading: false });
     }
   },
+
   setCurrentPage: (page: number) => set({ currentPage: page }),
 }));
