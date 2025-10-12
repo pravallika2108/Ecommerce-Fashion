@@ -24,7 +24,7 @@ type AuthStore = {
 
 export const useAuthStore = create<AuthStore>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       user: null,
       isLoading: false,
       error: null,
@@ -34,8 +34,7 @@ export const useAuthStore = create<AuthStore>()(
       register: async (name, email, password) => {
         set({ isLoading: true, error: null });
         try {
-          // Calls /api/auth/register (Next.js proxy)
-          const response = await axiosInstance.post("/register", {
+          const response = await axiosInstance.post("/auth/register", {
             name,
             email,
             password,
@@ -57,36 +56,26 @@ export const useAuthStore = create<AuthStore>()(
       login: async (email, password) => {
         set({ isLoading: true, error: null });
         try {
-          console.log("=== LOGIN ATTEMPT ===");
-          console.log("Calling /api/auth/login (Next.js proxy)");
-          
-          // Calls /api/auth/login (Next.js proxy) → Backend
-          const response = await axiosInstance.post("/login", {
+          const response = await axiosInstance.post("/auth/login", {
             email,
             password,
           });
 
-          console.log("Login response:", response.data);
-
           if (response.data.success && response.data.user) {
-            // Cookies are automatically set by the proxy
-            // We only need to store user data
             set({
               isLoading: false,
               user: response.data.user,
               error: null,
             });
-
             return true;
           } else {
             set({
               isLoading: false,
-              error: "Login failed - no user data returned",
+              error: "Login failed",
             });
             return false;
           }
         } catch (err) {
-          console.error("Login error:", err);
           set({
             isLoading: false,
             user: null,
@@ -102,16 +91,13 @@ export const useAuthStore = create<AuthStore>()(
       logout: async () => {
         set({ isLoading: true });
         try {
-          // Calls /api/auth/logout (Next.js proxy)
-          await axiosInstance.post("/logout");
-          
+          await axiosInstance.post("/auth/logout");
           set({ 
             user: null, 
             isLoading: false,
             error: null 
           });
         } catch (err) {
-          console.error("Logout error:", err);
           set({
             isLoading: false,
             error:
@@ -124,20 +110,9 @@ export const useAuthStore = create<AuthStore>()(
 
       refreshAccessToken: async () => {
         try {
-          console.log("Refreshing access token via proxy...");
-          // Calls /api/auth/refresh-token (Next.js proxy)
-          const response = await axiosInstance.post("/refresh-token");
-
-          if (response.data.success) {
-            console.log("Token refreshed successfully");
-            return true;
-          }
-          
-          return false;
+          const response = await axiosInstance.post("/auth/refresh-token");
+          return response.data.success || false;
         } catch (err) {
-          console.error("Refresh token error:", err);
-          
-          // If refresh fails, clear user state
           set({ user: null });
           return false;
         }
@@ -145,7 +120,6 @@ export const useAuthStore = create<AuthStore>()(
     }),
     {
       name: "auth-storage",
-      // Only persist user data, cookies are httpOnly
       partialize: (state) => ({
         user: state.user,
       }),
