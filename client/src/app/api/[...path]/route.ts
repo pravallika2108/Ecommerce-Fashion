@@ -25,12 +25,15 @@ export async function PATCH(request: NextRequest) {
 
 async function proxyRequest(method: string, request: NextRequest) {
   try {
-    // Extract the path after /api/
+    // Extract the FULL path after /api/ (e.g., /api/auth/register -> auth/register)
     const path = request.nextUrl.pathname.replace('/api/', '');
     const searchParams = request.nextUrl.searchParams.toString();
+    
+    // Forward to backend with the SAME path structure
+    // Frontend: /api/auth/register -> Backend: /api/auth/register
     const backendUrl = `${BACKEND_URL}/api/${path}${searchParams ? `?${searchParams}` : ''}`;
 
-    console.log(`[PROXY] ${method} /api/${path} -> ${backendUrl}`);
+    console.log(`[PROXY] ${method} ${request.nextUrl.pathname} -> ${backendUrl}`);
 
     // Get request body if it exists
     let body = null;
