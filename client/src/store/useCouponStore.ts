@@ -1,5 +1,6 @@
 import { API_ROUTES } from "@/utils/api";
-import axios from "axios";
+// store/useCouponStore.ts
+import { axiosInstance } from "@/lib/axios";
 import { create } from "zustand";
 
 export interface Coupon {
@@ -27,45 +28,38 @@ export const useCouponStore = create<CouponStore>((set, get) => ({
   couponList: [],
   isLoading: false,
   error: null,
+  
   fetchCoupons: async () => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axios.get(
-        `${API_ROUTES.COUPON}/fetch-all-coupons`,
-        { withCredentials: true }
-      );
+      const response = await axiosInstance.get("/coupon/fetch-all-coupons");
       set({ couponList: response.data.couponList, isLoading: false });
     } catch (e) {
       set({ isLoading: false, error: "Failed to fetch coupons" });
     }
   },
+  
   createCoupon: async (coupon) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axios.post(
-        `${API_ROUTES.COUPON}/create-coupon`,
-        coupon,
-        { withCredentials: true }
-      );
-
+      const response = await axiosInstance.post("/coupon/create-coupon", coupon);
       set({ isLoading: false });
       return response.data.coupon;
     } catch (e) {
-      set({ isLoading: false, error: "Failed to fetch coupons" });
+      set({ isLoading: false, error: "Failed to create coupon" });
       return null;
     }
   },
+  
   deleteCoupon: async (id: string) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axios.delete(`${API_ROUTES.COUPON}/${id}`, {
-        withCredentials: true,
-      });
+      const response = await axiosInstance.delete(`/coupon/${id}`);
       set({ isLoading: false });
       return response.data.success;
     } catch (error) {
-      set({ isLoading: false, error: "Failed to fetch coupons" });
-      return null;
+      set({ isLoading: false, error: "Failed to delete coupon" });
+      return false;
     }
   },
 }));
