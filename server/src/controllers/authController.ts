@@ -24,11 +24,12 @@ async function setTokens(
   refreshToken: string
 ) {
   // Cookie options for cross-origin
+  const isProduction = process.env.NODE_ENV === "production";
+  
   const cookieOptions = {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax" as const,
-    domain: process.env.NODE_ENV === "production" ? undefined : undefined,
+    secure: isProduction,
+    sameSite: (isProduction ? "none" : "lax") as "none" | "lax" | "strict",
     path: "/",
   };
 
