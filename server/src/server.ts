@@ -1,52 +1,50 @@
-import { PrismaClient } from "@prisma/client";
-import dotenv from "dotenv";
+// server.ts (Express backend)
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import authRoutes from "./routes/authRoutes";
-import productRoutes from "./routes/productRoutes";
-import couponRoutes from "./routes/couponRoutes";
-import settingsRoutes from "./routes/settingRoutes";
-import cartRoutes from "./routes/cartRoutes";
-import addressRoutes from "./routes/addressRoutes";
-import orderRoutes from "./routes/orderRoutes";
+import dotenv from "dotenv";
 
-//load all your enviroment variables
 dotenv.config();
+
 const app = express();
-const PORT = process.env.PORT || 3001;
 
-const corsOptions = {
-  origin: process.env.FRONTEND_URL,
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-};
-app.use(cookieParser());
-// app.use(cors(corsOptions));
+// ✅ CORS Configuration - CRITICAL for proxy to work
+app.use(
+  cors({
+    origin: [
+      process.env.FRONTEND_URL, // Frontend
+      "http://localhost:3000", // Local development
+    ],
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    optionsSuccessStatus: 200,
+  })
+);
+
+// ✅ Body parser middleware
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
+// ✅ Cookie parser
+app.use(cookieParser());
 
-export const prisma = new PrismaClient();
-
+// Your routes here
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
-app.use("/api/coupon", couponRoutes);
-app.use("/api/settings", settingsRoutes);
-app.use("/api/cart", cartRoutes);
-app.use("/api/address", addressRoutes);
-app.use("/api/order", orderRoutes);
+// ... etc
 
-app.get("/", (req, res) => {
-  res.send("Hello from E-Commerce backend");
+// ✅ Error handling middleware
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error("Server Error:", err);
+  res.status(err.status || 500).json({
+    success: false,
+    error: err.message || "Internal server error",
+  });
 });
 
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`Server is now running on port ${PORT}`);
+  console.log(`✅ Server running on port ${PORT}`);
+  console.log(`CORS allowed origin: https://ecommerce-fashion-1.onrender.com`);
 });
-
-process.on("SIGINT", async () => {
-  await prisma.$disconnect();
-  process.exit();
-});
-
