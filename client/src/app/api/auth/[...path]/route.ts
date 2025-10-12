@@ -6,10 +6,10 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://ecommerce-f
 async function proxyRequest(
   request: NextRequest,
   method: string,
-  path: string[]
+  params: { path: string[] }
 ) {
   try {
-    const pathString = path.join('/');
+    const pathString = params.path.join('/');
     const url = `${BACKEND_URL}/api/auth/${pathString}`;
     
     console.log(`[API Proxy] ${method} ${url}`);
@@ -108,28 +108,32 @@ async function proxyRequest(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { path: string[] } }
+  context: { params: Promise<{ path: string[] }> }
 ) {
-  return proxyRequest(request, 'POST', params.path);
+  const params = await context.params;
+  return proxyRequest(request, 'POST', params);
 }
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { path: string[] } }
+  context: { params: Promise<{ path: string[] }> }
 ) {
-  return proxyRequest(request, 'GET', params.path);
+  const params = await context.params;
+  return proxyRequest(request, 'GET', params);
 }
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { path: string[] } }
+  context: { params: Promise<{ path: string[] }> }
 ) {
-  return proxyRequest(request, 'PUT', params.path);
+  const params = await context.params;
+  return proxyRequest(request, 'PUT', params);
 }
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { path: string[] } }
+  context: { params: Promise<{ path: string[] }> }
 ) {
-  return proxyRequest(request, 'DELETE', params.path);
+  const params = await context.params;
+  return proxyRequest(request, 'DELETE', params);
 }
