@@ -1,8 +1,15 @@
-// server.ts (Express backend)
+import { PrismaClient } from "@prisma/client";
+import dotenv from "dotenv";
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import dotenv from "dotenv";
+import authRoutes from "./routes/authRoutes";
+import productRoutes from "./routes/productRoutes";
+import couponRoutes from "./routes/couponRoutes";
+import settingsRoutes from "./routes/settingRoutes";
+import cartRoutes from "./routes/cartRoutes";
+import addressRoutes from "./routes/addressRoutes";
+import orderRoutes from "./routes/orderRoutes";
 
 dotenv.config();
 
