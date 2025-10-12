@@ -1,5 +1,5 @@
 import { API_ROUTES } from "@/utils/api";
-import axios from "axios";
+import { axiosInstance } from "@/lib/axios";
 import debounce from "lodash/debounce";
 import { create } from "zustand";
 
@@ -25,17 +25,11 @@ interface CartStore {
   clearCart: () => Promise<void>;
 }
 
-export const useCartStore = create<CartStore>((set, get) => {
+export const useCartStore = create<CartStore>((set) => {
   const debounceUpdateCartItemQuantity = debounce(
     async (id: string, quantity: number) => {
       try {
-        await axios.put(
-          `${API_ROUTES.CART}/update/${id}`,
-          { quantity },
-          {
-            withCredentials: true,
-          }
-        );
+        await axiosInstance.put(`/cart/update/${id}`, { quantity });
       } catch (e) {
         set({ error: "Failed to update cart quantity" });
       }
@@ -46,29 +40,21 @@ export const useCartStore = create<CartStore>((set, get) => {
     items: [],
     isLoading: false,
     error: null,
+
     fetchCart: async () => {
       set({ isLoading: true, error: null });
       try {
-        const response = await axios.get(`${API_ROUTES.CART}/fetch-cart`, {
-          withCredentials: true,
-        });
-
+        const response = await axiosInstance.get("/cart/fetch-cart");
         set({ items: response.data.data, isLoading: false });
       } catch (e) {
         set({ error: "Failed to fetch cart", isLoading: false });
       }
     },
+
     addToCart: async (item) => {
       set({ isLoading: true, error: null });
       try {
-        const response = await axios.post(
-          `${API_ROUTES.CART}/add-to-cart`,
-          item,
-          {
-            withCredentials: true,
-          }
-        );
-
+        const response = await axiosInstance.post("/cart/add-to-cart", item);
         set((state) => ({
           items: [...state.items, response.data.data],
           isLoading: false,
@@ -77,13 +63,11 @@ export const useCartStore = create<CartStore>((set, get) => {
         set({ error: "Failed to add to cart", isLoading: false });
       }
     },
+
     removeFromCart: async (id) => {
       set({ isLoading: true, error: null });
       try {
-        await axios.delete(`${API_ROUTES.CART}/remove/${id}`, {
-          withCredentials: true,
-        });
-
+        await axiosInstance.delete(`/cart/remove/${id}`);
         set((state) => ({
           items: state.items.filter((item) => item.id !== id),
           isLoading: false,
@@ -92,29 +76,23 @@ export const useCartStore = create<CartStore>((set, get) => {
         set({ error: "Failed to delete from cart", isLoading: false });
       }
     },
+
     updateCartItemQuantity: async (id, quantity) => {
       set((state) => ({
         items: state.items.map((cartItem) =>
           cartItem.id === id ? { ...cartItem, quantity } : cartItem
         ),
       }));
-
       debounceUpdateCartItemQuantity(id, quantity);
     },
+
     clearCart: async () => {
       set({ isLoading: true, error: null });
       try {
-        await axios.post(
-          `${API_ROUTES.CART}/clear-cart`,
-          {},
-          {
-            withCredentials: true,
-          }
-        );
-
+        await axiosInstance.post("/cart/clear-cart", {});
         set({ items: [], isLoading: false });
       } catch (e) {
-        set({ error: "Failed to cart clear ", isLoading: false });
+        set({ error: "Failed to clear cart", isLoading: false });
       }
     },
   };
