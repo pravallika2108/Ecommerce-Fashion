@@ -1,24 +1,19 @@
-// src/lib/axios.ts (create this new file)
+// lib/axios.ts
 import axios from "axios";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 
-  "https://ecommerce-fashion-03io.onrender.com";
-
+// Use local Next.js API routes instead of direct backend calls
 export const axiosInstance = axios.create({
-  baseURL: `${API_BASE_URL}/api/auth`,
-  withCredentials: true,
+  baseURL: "/api/auth", // Points to your Next.js API proxy
+  headers: {
+    "Content-Type": "application/json",
+  },
+  withCredentials: true, // Send cookies with requests
 });
 
-// Add request interceptor to attach token to every request
+// Request interceptor for debugging
 axiosInstance.interceptors.request.use(
   (config) => {
-    // Try to get token from localStorage
-    const token = localStorage.getItem("accessToken");
-    
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    
+    console.log(`🚀 ${config.method?.toUpperCase()} ${config.url}`);
     return config;
   },
   (error) => {
@@ -26,40 +21,14 @@ axiosInstance.interceptors.request.use(
   }
 );
 
-// Add response interceptor to handle token refresh
+// Response interceptor for debugging
 axiosInstance.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
-
-    // If 401 and we haven't retried yet
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
-
-      try {
-        // Try to refresh token
-        const refreshResponse = await axios.post(
-          `${API_BASE_URL}/api/auth/refresh-token`,
-          {},
-          { withCredentials: true }
-        );
-
-        const { accessToken } = refreshResponse.data;
-        
-        if (accessToken) {
-          localStorage.setItem("accessToken", accessToken);
-          originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-          return axiosInstance(originalRequest);
-        }
-      } catch (refreshError) {
-        // Refresh failed, clear tokens and redirect to login
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("refreshToken");
-        window.location.href = "/auth/login";
-        return Promise.reject(refreshError);
-      }
-    }
-
+  (response) => {
+    console.log(`✅ ${response.config.method?.toUpperCase()} ${response.config.url} - ${response.status}`);
+    return response;
+  },
+  (error) => {
+    console.error(`❌ ${error.config?.method?.toUpperCase()} ${error.config?.url} - ${error.response?.status}`);
     return Promise.reject(error);
   }
 );
