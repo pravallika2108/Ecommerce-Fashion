@@ -34,6 +34,7 @@ export const useAuthStore = create<AuthStore>()(
       register: async (name, email, password) => {
         set({ isLoading: true, error: null });
         try {
+          // Calls /api/auth/register (Next.js proxy)
           const response = await axiosInstance.post("/register", {
             name,
             email,
@@ -56,17 +57,20 @@ export const useAuthStore = create<AuthStore>()(
       login: async (email, password) => {
         set({ isLoading: true, error: null });
         try {
+          console.log("=== LOGIN ATTEMPT ===");
+          console.log("Calling /api/auth/login (Next.js proxy)");
+          
+          // Calls /api/auth/login (Next.js proxy) → Backend
           const response = await axiosInstance.post("/login", {
             email,
             password,
           });
 
-          console.log("=== LOGIN RESPONSE ===");
-          console.log("Success:", response.data.success);
+          console.log("Login response:", response.data);
 
           if (response.data.success && response.data.user) {
-            // Store ONLY user data in Zustand
-            // Tokens are in httpOnly cookies, managed by the browser
+            // Cookies are automatically set by the proxy
+            // We only need to store user data
             set({
               isLoading: false,
               user: response.data.user,
@@ -98,9 +102,9 @@ export const useAuthStore = create<AuthStore>()(
       logout: async () => {
         set({ isLoading: true });
         try {
+          // Calls /api/auth/logout (Next.js proxy)
           await axiosInstance.post("/logout");
           
-          // Clear user state
           set({ 
             user: null, 
             isLoading: false,
@@ -120,7 +124,8 @@ export const useAuthStore = create<AuthStore>()(
 
       refreshAccessToken: async () => {
         try {
-          console.log("Refreshing access token...");
+          console.log("Refreshing access token via proxy...");
+          // Calls /api/auth/refresh-token (Next.js proxy)
           const response = await axiosInstance.post("/refresh-token");
 
           if (response.data.success) {
@@ -140,7 +145,7 @@ export const useAuthStore = create<AuthStore>()(
     }),
     {
       name: "auth-storage",
-      // Only persist user data, NOT tokens
+      // Only persist user data, cookies are httpOnly
       partialize: (state) => ({
         user: state.user,
       }),
