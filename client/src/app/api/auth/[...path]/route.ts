@@ -1,4 +1,4 @@
-// app/api/auth/[...path]/route.ts
+// app/api/[...path]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://ecommerce-fashion-03io.onrender.com';
@@ -10,11 +10,12 @@ async function proxyRequest(
 ) {
   try {
     const pathStr = pathArray.join('/');
-    const url = `${BACKEND_URL}/api/auth/${pathStr}`;
+    const url = `${BACKEND_URL}/api/${pathStr}`;
     
     console.log(`\n=== PROXY REQUEST ===`);
     console.log(`Method: ${method}`);
-    console.log(`Backend URL: ${url}`);
+    console.log(`Path: ${pathStr}`);
+    console.log(`Full URL: ${url}`);
 
     let body = null;
     const contentType = request.headers.get('content-type');
@@ -24,17 +25,14 @@ async function proxyRequest(
         body = await request.json();
         console.log(`Request Body:`, body);
       } catch (e) {
-        console.log(`No JSON body or parse error`);
+        console.log(`No JSON body`);
       }
     }
-
-    console.log(`Sending request to backend...`);
 
     const backendResponse = await fetch(url, {
       method,
       headers: {
         'Content-Type': 'application/json',
-        // Forward auth header if present
         ...(request.headers.get('authorization') && {
           'Authorization': request.headers.get('authorization')!,
         }),
@@ -47,36 +45,31 @@ async function proxyRequest(
     let responseData;
     try {
       responseData = await backendResponse.json();
-      console.log(`Backend Response Body:`, responseData);
+      console.log(`Response:`, responseData);
     } catch (e) {
       const text = await backendResponse.text();
-      console.log(`Backend Response (text):`, text);
+      console.log(`Response (text):`, text);
       responseData = text;
     }
 
-    // Create the response
+    // Create response
     const response = NextResponse.json(responseData, {
       status: backendResponse.status,
     });
 
-    // ✅ CRITICAL: Forward Set-Cookie headers from backend
+    // ✅ Forward Set-Cookie headers
     const setCookieHeaders = backendResponse.headers.getSetCookie();
-    console.log(`Set-Cookie Headers from backend:`, setCookieHeaders);
-
     if (setCookieHeaders && setCookieHeaders.length > 0) {
       setCookieHeaders.forEach((cookie) => {
-        console.log(`Forwarding cookie: ${cookie.substring(0, 50)}...`);
         response.headers.append('Set-Cookie', cookie);
       });
       console.log(`✅ Forwarded ${setCookieHeaders.length} cookies`);
-    } else {
-      console.log(`⚠️ No Set-Cookie headers found in backend response`);
     }
 
     console.log(`=== PROXY RESPONSE ===\n`);
     return response;
   } catch (error) {
-    console.error('\n❌ PROXY ERROR:', error);
+    console.error('❌ PROXY ERROR:', error);
     const errorMessage = error instanceof Error ? error.message : String(error);
     return NextResponse.json(
       { 
