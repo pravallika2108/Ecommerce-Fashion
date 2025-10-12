@@ -4,136 +4,127 @@ import { NextRequest, NextResponse } from 'next/server';
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://ecommerce-fashion-03io.onrender.com';
 
 async function proxyRequest(
-  request: NextRequest,
   method: string,
-  params: { path: string[] }
+  pathArray: string[],
+  request: NextRequest
 ) {
   try {
-    const pathString = params.path.join('/');
-    const url = `${BACKEND_URL}/api/auth/${pathString}`;
+    const pathStr = pathArray.join('/');
+    const url = `${BACKEND_URL}/api/auth/${pathStr}`;
     
-    console.log(`[API Proxy] ${method} ${url}`);
+    console.log(`\n=== PROXY REQUEST ===`);
+    console.log(`Method: ${method}`);
+    console.log(`Backend URL: ${url}`);
 
-    // Get request body for POST/PUT methods
     let body = null;
-    if (method === 'POST' || method === 'PUT') {
-      body = await request.json();
-    }
+    const contentType = request.headers.get('content-type');
 
-    // Get cookies from frontend request
-    const accessToken = request.cookies.get('accessToken')?.value;
-    const refreshToken = request.cookies.get('refreshToken')?.value;
-
-    // Build headers
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-    };
-
-    // Forward cookies to backend
-    if (accessToken || refreshToken) {
-      const cookieHeader = [
-        accessToken ? `accessToken=${accessToken}` : '',
-        refreshToken ? `refreshToken=${refreshToken}` : '',
-      ]
-        .filter(Boolean)
-        .join('; ');
-      
-      if (cookieHeader) {
-        headers['Cookie'] = cookieHeader;
+    if (method !== 'GET' && method !== 'HEAD' && contentType?.includes('application/json')) {
+      try {
+        body = await request.json();
+        console.log(`Request Body:`, body);
+      } catch (e) {
+        console.log(`No JSON body or parse error`);
       }
     }
 
-    // Make request to backend
-    const fetchOptions: RequestInit = {
+    console.log(`Sending request to backend...`);
+
+    const backendResponse = await fetch(url, {
       method,
-      headers,
-      credentials: 'include',
-    };
+      headers: {
+        'Content-Type': 'application/json',
+        // Forward auth header if present
+        ...(request.headers.get('authorization') && {
+          'Authorization': request.headers.get('authorization')!,
+        }),
+      },
+      body: body ? JSON.stringify(body) : undefined,
+    });
 
-    if (body) {
-      fetchOptions.body = JSON.stringify(body);
-    }
-
-    const response = await fetch(url, fetchOptions);
-    const data = await response.json();
-
-    console.log(`[API Proxy] Response status: ${response.status}`);
-
-    // Create Next.js response
-    const nextResponse = NextResponse.json(data, { status: response.status });
-
-    // Extract and forward Set-Cookie headers from backend
-    const setCookieHeaders = response.headers.get('set-cookie');
+    console.log(`Backend Response Status: ${backendResponse.status}`);
     
-    if (setCookieHeaders) {
-      console.log('[API Proxy] Forwarding cookies to frontend');
-      
-      // Parse Set-Cookie header (can contain multiple cookies)
-      const cookieStrings = setCookieHeaders.split(/,(?=\s*\w+=)/);
-      
-      cookieStrings.forEach((cookieString) => {
-        const cookieParts = cookieString.split(';').map(part => part.trim());
-        const [nameValue] = cookieParts;
-        const [name, value] = nameValue.split('=');
-        
-        if (name && value) {
-          // Determine maxAge based on cookie name
-          const maxAge = name.includes('access') 
-            ? 60 * 60 // 1 hour
-            : 7 * 24 * 60 * 60; // 7 days
-
-          // Set cookie on frontend domain
-          nextResponse.cookies.set(name, value, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            path: '/',
-            maxAge,
-          });
-          
-          console.log(`[API Proxy] Set cookie: ${name}`);
-        }
-      });
+    let responseData;
+    try {
+      responseData = await backendResponse.json();
+      console.log(`Backend Response Body:`, responseData);
+    } catch (e) {
+      const text = await backendResponse.text();
+      console.log(`Backend Response (text):`, text);
+      responseData = text;
     }
 
-    return nextResponse;
+    // Create the response
+    const response = NextResponse.json(responseData, {
+      status: backendResponse.status,
+    });
+
+    // ✅ CRITICAL: Forward Set-Cookie headers from backend
+    const setCookieHeaders = backendResponse.headers.getSetCookie();
+    console.log(`Set-Cookie Headers from backend:`, setCookieHeaders);
+
+    if (setCookieHeaders && setCookieHeaders.length > 0) {
+      setCookieHeaders.forEach((cookie) => {
+        console.log(`Forwarding cookie: ${cookie.substring(0, 50)}...`);
+        response.headers.append('Set-Cookie', cookie);
+      });
+      console.log(`✅ Forwarded ${setCookieHeaders.length} cookies`);
+    } else {
+      console.log(`⚠️ No Set-Cookie headers found in backend response`);
+    }
+
+    console.log(`=== PROXY RESPONSE ===\n`);
+    return response;
   } catch (error) {
-    console.error('[API Proxy] Error:', error);
+    console.error('\n❌ PROXY ERROR:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
     return NextResponse.json(
-      { success: false, error: 'Proxy request failed' },
-      { status: 500 }
+      { 
+        success: false, 
+        error: 'Proxy request failed',
+        details: errorMessage 
+      },
+      { status: 502 }
     );
   }
-}
-
-export async function POST(
-  request: NextRequest,
-  context: { params: Promise<{ path: string[] }> }
-) {
-  const params = await context.params;
-  return proxyRequest(request, 'POST', params);
 }
 
 export async function GET(
   request: NextRequest,
   context: { params: Promise<{ path: string[] }> }
 ) {
-  const params = await context.params;
-  return proxyRequest(request, 'GET', params);
+  const { path } = await context.params;
+  return proxyRequest('GET', path, request);
+}
+
+export async function POST(
+  request: NextRequest,
+  context: { params: Promise<{ path: string[] }> }
+) {
+  const { path } = await context.params;
+  return proxyRequest('POST', path, request);
 }
 
 export async function PUT(
   request: NextRequest,
   context: { params: Promise<{ path: string[] }> }
 ) {
-  const params = await context.params;
-  return proxyRequest(request, 'PUT', params);
+  const { path } = await context.params;
+  return proxyRequest('PUT', path, request);
 }
 
 export async function DELETE(
   request: NextRequest,
   context: { params: Promise<{ path: string[] }> }
 ) {
-  const params = await context.params;
-  return proxyRequest(request, 'DELETE', params);
+  const { path } = await context.params;
+  return proxyRequest('DELETE', path, request);
+}
+
+export async function PATCH(
+  request: NextRequest,
+  context: { params: Promise<{ path: string[] }> }
+) {
+  const { path } = await context.params;
+  return proxyRequest('PATCH', path, request);
 }
