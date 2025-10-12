@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 
 function ProductDetailsContent({ id }: { id: string }) {
   const [product, setProduct] = useState<any>(null);
+  const [imageErrors, setImageErrors] = useState<{ [key: string]: boolean }>({});
   const { getProductById, isLoading } = useProductStore();
   const { addToCart } = useCartStore();
   const { toast } = useToast();
@@ -55,6 +56,10 @@ function ProductDetailsContent({ id }: { id: string }) {
     }
   };
 
+  const handleImageError = (imageUrl: string) => {
+    setImageErrors((prev) => ({ ...prev, [imageUrl]: true }));
+  };
+
   console.log(id, product);
 
   if (!product || isLoading) return <ProductDetailsSkeleton />;
@@ -64,37 +69,54 @@ function ProductDetailsContent({ id }: { id: string }) {
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col lg:flex-row gap-8">
           <div className="lg:w-2/3 flex gap-4">
+            {/* Thumbnail Images */}
             <div className="hidden lg:flex flex-col gap-2 w-24">
               {product?.images.map((image: string, index: number) => (
                 <button
                   onClick={() => setSelectedImage(index)}
                   key={index}
-                  className={`aspect-square bg-white border-2 overflow-hidden ${
+                  className={`aspect-square bg-gray-100 border-2 overflow-hidden transition-all ${
                     selectedImage === index
                       ? "border-black"
                       : "border-gray-200"
                   }`}
                 >
-                  <div className="w-full h-full p-2">
+                  {imageErrors[image] ? (
+                    <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                      <span className="text-xs text-gray-400">N/A</span>
+                    </div>
+                  ) : (
                     <img
                       src={image}
                       alt={`Product-${index + 1}`}
-                      className="w-full h-full object-contain"
+                      className="w-full h-full object-cover"
+                      onError={() => handleImageError(image)}
                     />
-                  </div>
+                  )}
                 </button>
               ))}
             </div>
-            <div className="flex-1 aspect-square bg-white border overflow-hidden">
-              <div className="w-full h-full p-12">
+
+            {/* Main Product Image */}
+            <div className="flex-1 aspect-square bg-gray-100 border overflow-hidden flex items-center justify-center">
+              {imageErrors[product.images[selectedImage]] ? (
+                <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                  <span className="text-gray-400">Image not available</span>
+                </div>
+              ) : (
                 <img
                   src={product.images[selectedImage]}
                   alt={product.name}
                   className="w-full h-full object-contain"
+                  onError={() =>
+                    handleImageError(product.images[selectedImage])
+                  }
                 />
-              </div>
+              )}
             </div>
           </div>
+
+          {/* Product Information */}
           <div className="lg:w-1/3 space-y-6">
             <div>
               <h1 className="text-3xl font-bold mb-2">{product.name}</h1>
@@ -104,30 +126,35 @@ function ProductDetailsContent({ id }: { id: string }) {
                 </span>
               </div>
             </div>
+
+            {/* Color Selection */}
             <div>
               <h3 className="font-medium mb-2">Color</h3>
               <div className="flex gap-2">
                 {product.colors.map((color: string, index: number) => (
                   <button
                     key={index}
-                    className={`w-12 h-12 rounded-full border-2 ${
+                    className={`w-12 h-12 rounded-full border-2 transition-all ${
                       selectedColor === index
-                        ? "border-black"
+                        ? "border-black scale-110"
                         : "border-gray-300"
                     }`}
                     style={{ backgroundColor: color }}
                     onClick={() => setSelectedColor(index)}
+                    title={`Color option ${index + 1}`}
                   />
                 ))}
               </div>
             </div>
+
+            {/* Size Selection */}
             <div>
               <h3 className="font-medium mb-2">Size</h3>
-              <div className="flex gap-2">
-                {product.sizes.map((size: string, index: string) => (
+              <div className="flex gap-2 flex-wrap">
+                {product.sizes.map((size: string, index: number) => (
                   <Button
                     key={index}
-                    className={`w-12 h-12`}
+                    className="w-12 h-12"
                     variant={selectedSize === size ? "default" : "outline"}
                     onClick={() => setSelectedSize(size)}
                   >
@@ -136,27 +163,33 @@ function ProductDetailsContent({ id }: { id: string }) {
                 ))}
               </div>
             </div>
+
+            {/* Quantity Selection */}
             <div>
               <h3 className="font-medium mb-2">Quantity</h3>
               <div className="flex items-center gap-2">
                 <Button
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
                   variant="outline"
+                  size="icon"
                 >
-                  -
+                  −
                 </Button>
-                <span className="w-12 text-center">{quantity}</span>
+                <span className="w-12 text-center font-medium">{quantity}</span>
                 <Button
                   onClick={() => setQuantity(quantity + 1)}
                   variant="outline"
+                  size="icon"
                 >
                   +
                 </Button>
               </div>
             </div>
+
+            {/* Add to Cart Button */}
             <div>
               <Button
-                className={"w-full bg-black text-white hover:bg-gray-800"}
+                className="w-full bg-black text-white hover:bg-gray-800 py-6 text-lg"
                 onClick={handleAddToCart}
               >
                 ADD TO CART
@@ -164,6 +197,8 @@ function ProductDetailsContent({ id }: { id: string }) {
             </div>
           </div>
         </div>
+
+        {/* Product Details Tabs */}
         <div className="mt-16">
           <Tabs defaultValue="details">
             <TabsList className="w-full justify-start border-b">
@@ -177,11 +212,11 @@ function ProductDetailsContent({ id }: { id: string }) {
               <p className="text-gray-700 mb-4">{product.description}</p>
             </TabsContent>
             <TabsContent value="reviews" className="mt-5">
-              Reviews
+              <p className="text-gray-700">Reviews coming soon</p>
             </TabsContent>
             <TabsContent value="shipping">
               <p className="text-gray-700 mb-4">
-                Shipping and return information goes here.Please read the info
+                Shipping and return information goes here. Please read the info
                 before proceeding.
               </p>
             </TabsContent>
