@@ -1,34 +1,41 @@
 // lib/axios.ts
 import axios from "axios";
 
-// Use local Next.js API routes instead of direct backend calls
+// IMPORTANT: Point to local Next.js API routes, not backend directly
 export const axiosInstance = axios.create({
-  baseURL: "/api/auth", // Points to your Next.js API proxy
+  baseURL: "/api/auth", // This hits your Next.js API proxy
   headers: {
     "Content-Type": "application/json",
   },
-  withCredentials: true, // Send cookies with requests
+  withCredentials: true, // Send cookies
 });
 
-// Request interceptor for debugging
+// Request interceptor
 axiosInstance.interceptors.request.use(
   (config) => {
-    console.log(`🚀 ${config.method?.toUpperCase()} ${config.url}`);
+    console.log(`🚀 [Frontend] ${config.method?.toUpperCase()} ${config.url}`);
     return config;
   },
   (error) => {
+    console.error('[Frontend] Request error:', error);
     return Promise.reject(error);
   }
 );
 
-// Response interceptor for debugging
+// Response interceptor
 axiosInstance.interceptors.response.use(
   (response) => {
-    console.log(`✅ ${response.config.method?.toUpperCase()} ${response.config.url} - ${response.status}`);
+    console.log(`✅ [Frontend] ${response.config.method?.toUpperCase()} ${response.config.url} - ${response.status}`);
     return response;
   },
   (error) => {
-    console.error(`❌ ${error.config?.method?.toUpperCase()} ${error.config?.url} - ${error.response?.status}`);
+    console.error(`❌ [Frontend] ${error.config?.method?.toUpperCase()} ${error.config?.url} - ${error.response?.status}`);
+    
+    // If 401, could trigger token refresh here
+    if (error.response?.status === 401) {
+      console.log('[Frontend] Unauthorized - might need to refresh token or redirect to login');
+    }
+    
     return Promise.reject(error);
   }
 );
