@@ -1,7 +1,6 @@
 // src/store/useAuthStore.ts
-import { API_ROUTES } from "@/utils/api";
 import { axiosInstance } from "@/lib/axios";
-import axios from "axios"
+import axios from "axios";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
@@ -14,26 +13,23 @@ type User = {
 
 type AuthStore = {
   user: User | null;
-  accessToken: string | null;
-  refreshToken: string | null;
   isLoading: boolean;
   error: string | null;
   register: (name: string, email: string, password: string) => Promise<string | null>;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
   refreshAccessToken: () => Promise<boolean>;
+  setUser: (user: User | null) => void;
 };
-
-
 
 export const useAuthStore = create<AuthStore>()(
   persist(
     (set, get) => ({
       user: null,
-      accessToken: null,
-      refreshToken: null,
       isLoading: false,
       error: null,
+
+      setUser: (user) => set({ user }),
 
       register: async (name, email, password) => {
         set({ isLoading: true, error: null });
@@ -64,30 +60,32 @@ export const useAuthStore = create<AuthStore>()(
             email,
             password,
           });
-          console.log("=== FRONTEND LOGIN DEBUG ===");
-          console.log("Response data:", response.data);
 
-          const { user, accessToken, refreshToken } = response.data;
+          console.log("=== LOGIN RESPONSE ===");
+          console.log("Success:", response.data.success);
 
-          // Store tokens in both localStorage and zustand state
-          if (accessToken) {
-            localStorage.setItem("accessToken", accessToken);
+          if (response.data.success && response.data.user) {
+            // Store ONLY user data in Zustand
+            // Tokens are in httpOnly cookies, managed by the browser
+            set({
+              isLoading: false,
+              user: response.data.user,
+              error: null,
+            });
+
+            return true;
+          } else {
+            set({
+              isLoading: false,
+              error: "Login failed - no user data returned",
+            });
+            return false;
           }
-          if (refreshToken) {
-            localStorage.setItem("refreshToken", refreshToken);
-          }
-
-          set({
-            isLoading: false,
-            user,
-            accessToken: accessToken || null,
-            refreshToken: refreshToken || null,
-          });
-
-          return true;
         } catch (err) {
+          console.error("Login error:", err);
           set({
             isLoading: false,
+            user: null,
             error:
               axios.isAxiosError(err) && err.response
                 ? (err.response.data.error as string)
@@ -101,10 +99,15 @@ export const useAuthStore = create<AuthStore>()(
         set({ isLoading: true });
         try {
           await axiosInstance.post("/logout");
-          localStorage.removeItem("accessToken");
-          localStorage.removeItem("refreshToken");
-          set({ user: null, accessToken: null, refreshToken: null, isLoading: false });
+          
+          // Clear user state
+          set({ 
+            user: null, 
+            isLoading: false,
+            error: null 
+          });
         } catch (err) {
+          console.error("Logout error:", err);
           set({
             isLoading: false,
             error:
@@ -117,28 +120,29 @@ export const useAuthStore = create<AuthStore>()(
 
       refreshAccessToken: async () => {
         try {
+          console.log("Refreshing access token...");
           const response = await axiosInstance.post("/refresh-token");
-          console.log("FRONTEND REFRESH DEBUG:", response.data);
 
-          const { accessToken } = response.data;
-          if (accessToken) {
-            localStorage.setItem("accessToken", accessToken);
-            set({ accessToken });
+          if (response.data.success) {
+            console.log("Token refreshed successfully");
             return true;
           }
+          
           return false;
         } catch (err) {
-          console.error("Refresh token error frontend:", err);
+          console.error("Refresh token error:", err);
+          
+          // If refresh fails, clear user state
+          set({ user: null });
           return false;
         }
       },
     }),
     {
       name: "auth-storage",
+      // Only persist user data, NOT tokens
       partialize: (state) => ({
         user: state.user,
-        accessToken: state.accessToken,
-        refreshToken: state.refreshToken,
       }),
     }
   )
