@@ -43,6 +43,7 @@ function ProductListingPage() {
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState("createdAt");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [imageErrors, setImageErrors] = useState<{ [key: string]: boolean }>({});
   const router = useRouter();
   const {
     products,
@@ -84,7 +85,6 @@ function ProductListingPage() {
   ]);
 
   const handleSortChange = (value: string) => {
-    console.log(value);
     const [newSortBy, newSortOrder] = value.split("-");
     setSortBy(newSortBy);
     setSortOrder(newSortOrder as "asc" | "desc");
@@ -110,6 +110,10 @@ function ProductListingPage() {
 
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
+  };
+
+  const handleImageError = (imageUrl: string) => {
+    setImageErrors((prev) => ({ ...prev, [imageUrl]: true }));
   };
 
   const FilterSection = () => {
@@ -209,11 +213,12 @@ function ProductListingPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <div className="relative h-[300px] overflow-hidden">
+      {/* Banner Section */}
+      <div className="relative h-[300px] overflow-hidden bg-gray-200">
         <img
           src="https://images.unsplash.com/photo-1469334031218-e382a71b716b?q=80&w=2070&auto=format&fit=crop"
           alt="Listing Page Banner"
-          className="w-full object-cover h-full "
+          className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center">
           <div className="text-center text-white">
@@ -222,11 +227,12 @@ function ProductListingPage() {
           </div>
         </div>
       </div>
+
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-2xl font-semibold">All Products</h2>
           <div className="flex items-center gap-4">
-            {/* Mobile filter render */}
+            {/* Mobile filter */}
             <Dialog>
               <DialogTrigger asChild>
                 <Button variant={"outline"} className="lg:hidden">
@@ -241,18 +247,20 @@ function ProductListingPage() {
                 <FilterSection />
               </DialogContent>
             </Dialog>
+
+            {/* Sort dropdown */}
             <Select
               value={`${sortBy}-${sortOrder}`}
               onValueChange={(value) => handleSortChange(value)}
               name="sort"
             >
-              <SelectTrigger className="mt-1.5">
-                <SelectValue placeholder="Select Brand" />
+              <SelectTrigger className="mt-1.5 w-[200px]">
+                <SelectValue placeholder="Sort by" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="createdAt-asc">Sort by: Featured</SelectItem>
+                <SelectItem value="createdAt-desc">Sort by: Featured</SelectItem>
                 <SelectItem value="price-asc">Price: Low to High</SelectItem>
-                <SelectItem value="price-desc">Price : High to Low</SelectItem>
+                <SelectItem value="price-desc">Price: High to Low</SelectItem>
                 <SelectItem value="createdAt-desc">
                   Sort by: Newest First
                 </SelectItem>
@@ -260,16 +268,35 @@ function ProductListingPage() {
             </Select>
           </div>
         </div>
+
         <div className="flex gap-8">
+          {/* Sidebar filters */}
           <div className="hidden lg:block w-64 flex-shrink-0">
             <FilterSection />
           </div>
-          {/* product grid */}
+
+          {/* Product grid */}
           <div className="flex-1">
             {isLoading ? (
-              <div>Loading...</div>
+              <div className="flex items-center justify-center h-96">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black mx-auto mb-4"></div>
+                  <p className="text-gray-500">Loading products...</p>
+                </div>
+              </div>
             ) : error ? (
-              <div>Error: {error}</div>
+              <div className="flex items-center justify-center h-96">
+                <div className="text-center">
+                  <p className="text-red-500 mb-2">Error: {error}</p>
+                  <Button onClick={() => fetchAllProducts()}>
+                    Try Again
+                  </Button>
+                </div>
+              </div>
+            ) : products.length === 0 ? (
+              <div className="flex items-center justify-center h-96">
+                <p className="text-gray-500 text-lg">No products found</p>
+              </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 {products.map((productItem) => (
@@ -278,31 +305,44 @@ function ProductListingPage() {
                     key={productItem.id}
                     className="group cursor-pointer"
                   >
-                    <div className="relative aspect-square mb-4 bg-white border overflow-hidden">
-                      <div className="w-full h-full p-6">
+                    {/* Product Image */}
+                    <div className="relative aspect-square mb-4 bg-gray-100 border overflow-hidden">
+                      {imageErrors[productItem.images[0]] ? (
+                        <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                          <span className="text-gray-400">Image unavailable</span>
+                        </div>
+                      ) : (
                         <img
                           src={productItem.images[0]}
                           alt={productItem.name}
-                          className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105"
+                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                          onError={() =>
+                            handleImageError(productItem.images[0])
+                          }
                         />
-                      </div>
+                      )}
                       <div className="absolute inset-0 bg-black bg-opacity-20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
                         <Button className="bg-white text-black hover:bg-gray-100">
                           Quick View
                         </Button>
                       </div>
                     </div>
-                    <h3 className="font-bold">{productItem.name}</h3>
-                    <div className="flex items-center justify-between mt-2">
-                      <span className="font-semibold">
+
+                    {/* Product Info */}
+                    <h3 className="font-bold mb-2 line-clamp-2">
+                      {productItem.name}
+                    </h3>
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-lg">
                         ${productItem.price.toFixed(2)}
                       </span>
                       <div className="flex gap-1">
                         {productItem.colors.map((colorItem, index) => (
                           <div
                             key={index}
-                            className={`w-4 h-4 rounded-full border `}
+                            className="w-4 h-4 rounded-full border border-gray-300"
                             style={{ backgroundColor: colorItem }}
+                            title={`Color option ${index + 1}`}
                           />
                         ))}
                       </div>
@@ -312,39 +352,47 @@ function ProductListingPage() {
               </div>
             )}
 
-            {/* pagination */}
-            <div className="mt-10 items-center flex justify-center gap-2">
-              <Button
-                disabled={currentPage === 1}
-                variant={"outline"}
-                size={"icon"}
-                onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                (page) => (
-                  <Button
-                    key={page}
-                    variant={currentPage === page ? "default" : "outline"}
-                    className="w-10"
-                    onClick={() => handlePageChange(page)}
-                  >
-                    {page}
-                  </Button>
-                )
-              )}
-              <Button
-                disabled={currentPage === totalPages}
-                variant={"outline"}
-                size={"icon"}
-                onClick={() =>
-                  handlePageChange(Math.min(totalPages, currentPage + 1))
-                }
-              >
-                <ChevronRight className="w-4 h-4" />
-              </Button>
-            </div>
+            {/* Pagination */}
+            {!isLoading && products.length > 0 && totalPages > 1 && (
+              <div className="mt-10 flex items-center justify-center gap-2">
+                <Button
+                  disabled={currentPage === 1}
+                  variant="outline"
+                  size="icon"
+                  onClick={() =>
+                    handlePageChange(Math.max(1, currentPage - 1))
+                  }
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                  (page) => (
+                    <Button
+                      key={page}
+                      variant={
+                        currentPage === page ? "default" : "outline"
+                      }
+                      className="w-10"
+                      onClick={() => handlePageChange(page)}
+                    >
+                      {page}
+                    </Button>
+                  )
+                )}
+                <Button
+                  disabled={currentPage === totalPages}
+                  variant="outline"
+                  size="icon"
+                  onClick={() =>
+                    handlePageChange(
+                      Math.min(totalPages, currentPage + 1)
+                    )
+                  }
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </div>
