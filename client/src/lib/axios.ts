@@ -3,7 +3,7 @@ import axios from "axios";
 
 // IMPORTANT: Point to local Next.js API routes, not backend directly
 export const axiosInstance = axios.create({
-  baseURL: "/api/auth", // This hits your Next.js API proxy
+  baseURL: "/api", // This hits your Next.js API proxy
   headers: {
     "Content-Type": "application/json",
   },
