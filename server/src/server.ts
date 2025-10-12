@@ -30,21 +30,25 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 // Your routes here
+export const prisma = new PrismaClient();
+
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
-// ... etc
+app.use("/api/coupon", couponRoutes);
+app.use("/api/settings", settingsRoutes);
+app.use("/api/cart", cartRoutes);
+app.use("/api/address", addressRoutes);
+app.use("/api/order", orderRoutes);
 
-// ✅ Error handling middleware
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error("Server Error:", err);
-  res.status(err.status || 500).json({
-    success: false,
-    error: err.message || "Internal server error",
-  });
+app.get("/", (req, res) => {
+  res.send("Hello from E-Commerce backend");
 });
 
-const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`✅ Server running on port ${PORT}`);
-  console.log(`CORS allowed origin: https://ecommerce-fashion-1.onrender.com`);
+  console.log(`Server is now running on port ${PORT}`);
+});
+
+process.on("SIGINT", async () => {
+  await prisma.$disconnect();
+  process.exit();
 });
