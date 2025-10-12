@@ -12,7 +12,7 @@ import addressRoutes from "./routes/addressRoutes";
 import orderRoutes from "./routes/orderRoutes";
 
 dotenv.config();
-
+const PORT = process.env.PORT || 3001;
 const app = express();
 
 // ✅ CORS Configuration - CRITICAL for proxy to work
