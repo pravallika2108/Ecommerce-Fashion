@@ -41,11 +41,18 @@ async function proxyRequest(method: string, request: NextRequest) {
       body = await request.text();
     }
 
-    // Forward the request to backend
+    // Get cookies from the incoming request
+    const cookies = request.headers.get('cookie');
+    
+    console.log(`[PROXY] Forwarding cookies:`, cookies ? 'yes' : 'no');
+
+    // Forward the request to backend with cookies
     const response = await fetch(backendUrl, {
       method,
       headers: {
         'Content-Type': 'application/json',
+        // Forward cookies to backend
+        ...(cookies && { 'Cookie': cookies }),
         // Forward any authorization headers if present
         ...(request.headers.get('authorization') && {
           'Authorization': request.headers.get('authorization')!
