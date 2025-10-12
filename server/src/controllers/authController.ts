@@ -23,17 +23,23 @@ async function setTokens(
   accessToken: string,
   refreshToken: string
 ) {
+  // Cookie options for cross-origin
+  const cookieOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax" as const,
+    domain: process.env.NODE_ENV === "production" ? undefined : undefined,
+    path: "/",
+  };
+
   res.cookie("accessToken", accessToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-    maxAge: 60 * 60 * 1000,
+    ...cookieOptions,
+    maxAge: 60 * 60 * 1000, // 1 hour
   });
+  
   res.cookie("refreshToken", refreshToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-    maxAge: 7 * 24 * 60 * 60,
+    ...cookieOptions,
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   });
 }
 
@@ -83,33 +89,46 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     ) {
       res.status(401).json({
         success: false,
-        error: "Invalied credentials",
+        error: "Invalid credentials",
       });
-
       return;
     }
-    //create our access and refreshtoken
+
+    // Create access and refresh tokens
     const { accessToken, refreshToken } = generateToken(
       extractCurrentUser.id,
       extractCurrentUser.email,
       extractCurrentUser.role
     );
 
-    //set out tokens
+    // CRITICAL FIX: Save refresh token to database
+    await prisma.user.update({
+      where: { id: extractCurrentUser.id },
+      data: { refreshToken },
+    });
+
+    // Set cookies
     await setTokens(res, accessToken, refreshToken);
+    
     res.status(200).json({
       success: true,
-      message: "Login successfully",
+      message: "Login successful",
       user: {
         id: extractCurrentUser.id,
         name: extractCurrentUser.name,
         email: extractCurrentUser.email,
         role: extractCurrentUser.role,
       },
+      // OPTIONAL: Include tokens in response for frontend state
+      accessToken,
+      refreshToken,
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Login failed" });
+    res.status(500).json({ 
+      success: false,
+      error: "Login failed" 
+    });
   }
 };
 
@@ -118,11 +137,13 @@ export const refreshAccessToken = async (
   res: Response
 ): Promise<void> => {
   const refreshToken = req.cookies.refreshToken;
+  
   if (!refreshToken) {
     res.status(401).json({
       success: false,
       error: "Invalid refresh token",
     });
+    return;
   }
 
   try {
@@ -135,33 +156,66 @@ export const refreshAccessToken = async (
     if (!user) {
       res.status(401).json({
         success: false,
-        error: "User not found",
+        error: "User not found or refresh token invalid",
       });
       return;
     }
 
+    // Generate new tokens
     const { accessToken, refreshToken: newRefreshToken } = generateToken(
       user.id,
       user.email,
       user.role
     );
-    //set out tokens
+
+    // Update refresh token in database
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { refreshToken: newRefreshToken },
+    });
+
+    // Set new cookies
     await setTokens(res, accessToken, newRefreshToken);
+    
     res.status(200).json({
       success: true,
-      message: "Refresh token refreshed successfully",
+      message: "Token refreshed successfully",
+      accessToken, // Include in response for frontend
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Refresh token error" });
+    res.status(500).json({ 
+      success: false,
+      error: "Refresh token error" 
+    });
   }
 };
 
 export const logout = async (req: Request, res: Response): Promise<void> => {
-  res.clearCookie("accessToken");
-  res.clearCookie("refreshToken");
-  res.json({
-    success: true,
-    message: "User logged out successfully",
-  });
+  try {
+    const refreshToken = req.cookies.refreshToken;
+
+    // Clear refresh token from database
+    if (refreshToken) {
+      await prisma.user.updateMany({
+        where: { refreshToken },
+        data: { refreshToken: null },
+      });
+    }
+
+    // Clear cookies
+    res.clearCookie("accessToken");
+    res.clearCookie("refreshToken");
+    
+    res.json({
+      success: true,
+      message: "User logged out successfully",
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      error: "Logout failed",
+    });
+  }
 };
