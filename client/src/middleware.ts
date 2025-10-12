@@ -18,100 +18,101 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Try to get token from cookies first
+  // Get token from cookies
   let accessToken = request.cookies.get("accessToken")?.value;
   const refreshToken = request.cookies.get("refreshToken")?.value;
 
   console.log("=== MIDDLEWARE DEBUG ===");
   console.log("Pathname:", pathname);
-  console.log("AccessToken from cookie:", accessToken ? "exists" : "undefined");
-  console.log("RefreshToken from cookie:", refreshToken ? "exists" : "undefined");
+  console.log("AccessToken:", accessToken ? "exists" : "missing");
+  console.log("RefreshToken:", refreshToken ? "exists" : "missing");
 
-  // If no cookie, try to get from request header (sent by frontend)
+  // If no access token, redirect to login immediately
   if (!accessToken) {
-    const authHeader = request.headers.get("authorization");
-    if (authHeader?.startsWith("Bearer ")) {
-      accessToken = authHeader.substring(7);
-      console.log("AccessToken from header:", accessToken ? "exists" : "undefined");
-    }
+    console.log("No access token, redirecting to login");
+    return NextResponse.redirect(new URL("/auth/login", request.url));
   }
 
-  if (accessToken) {
-    try {
-      const { payload } = await jwtVerify(
-        accessToken,
-        new TextEncoder().encode(process.env.JWT_SECRET!)
-      );
-      const { role } = payload as { role: string };
+  try {
+    // Verify the access token
+    const { payload } = await jwtVerify(
+      accessToken,
+      new TextEncoder().encode(process.env.JWT_SECRET!)
+    );
+    const { role } = payload as { role: string };
+    console.log("Token verified, role:", role);
 
-      console.log("Token verified, role:", role);
+    // Role-based route protection
+    if (
+      role === "SUPER_ADMIN" &&
+      userRoutes.some((route) => pathname.startsWith(route))
+    ) {
+      return NextResponse.redirect(new URL("/super-admin", request.url));
+    }
 
-      // Role-based route protection
-      if (
-        role === "SUPER_ADMIN" &&
-        userRoutes.some((route) => pathname.startsWith(route))
-      ) {
-        return NextResponse.redirect(new URL("/super-admin", request.url));
-      }
+    if (
+      role !== "SUPER_ADMIN" &&
+      superAdminRoutes.some((route) => pathname.startsWith(route))
+    ) {
+      return NextResponse.redirect(new URL("/home", request.url));
+    }
 
-      if (
-        role !== "SUPER_ADMIN" &&
-        superAdminRoutes.some((route) => pathname.startsWith(route))
-      ) {
-        return NextResponse.redirect(new URL("/home", request.url));
-      }
+    return NextResponse.next();
+  } catch (err) {
+    console.error("Token verification failed:", err);
 
-      return NextResponse.next();
-    } catch (err) {
-      console.error("Token verification failed:", err);
-      
-      // Try to refresh token
-      if (refreshToken) {
-        try {
-          const refreshResponse = await fetch(
-            `${BACKEND_URL}/api/auth/refresh-token`,
-            {
-              method: "POST",
-              credentials: "include",
-              headers: {
-                "Content-Type": "application/json",
-                Cookie: `refreshToken=${refreshToken}`,
-              },
-            }
-          );
+    // CRITICAL FIX: Only try to refresh if we have a refresh token
+    // AND we're not in a refresh loop
+    if (refreshToken && !pathname.includes("/auth")) {
+      try {
+        console.log("Attempting token refresh...");
+        const refreshResponse = await fetch(
+          `${BACKEND_URL}/api/auth/refresh-token`,
+          {
+            method: "POST",
+            credentials: "include",
+            headers: {
+              "Content-Type": "application/json",
+              Cookie: `refreshToken=${refreshToken}`,
+            },
+          }
+        );
 
-          if (refreshResponse.ok) {
-            const data = await refreshResponse.json();
-            const newAccessToken = data.accessToken;
+        if (refreshResponse.ok) {
+          const data = await refreshResponse.json();
+          
+          if (data.success && data.accessToken) {
             console.log("Token refreshed successfully");
-
+            
             const response = NextResponse.next();
-            response.cookies.set("accessToken", newAccessToken, {
+            response.cookies.set("accessToken", data.accessToken, {
               httpOnly: true,
               secure: process.env.NODE_ENV === "production",
-              sameSite: "lax",
+              sameSite: "strict",
+              maxAge: 60 * 60, // 1 hour
               path: "/",
             });
+            
             return response;
           }
-        } catch (refreshErr) {
-          console.error("Token refresh error:", refreshErr);
         }
+        
+        console.log("Token refresh failed, redirecting to login");
+      } catch (refreshErr) {
+        console.error("Token refresh error:", refreshErr);
       }
-
-      // If refresh fails, redirect to login
-      const resp = NextResponse.redirect(new URL("/auth/login", request.url));
-      resp.cookies.delete("accessToken");
-      resp.cookies.delete("refreshToken");
-      return resp;
     }
-  }
 
-  // No access token at all — redirect to login
-  console.log("No access token found, redirecting to login");
-  return NextResponse.redirect(new URL("/auth/login", request.url));
+    // If refresh fails or no refresh token, clear cookies and redirect
+    const response = NextResponse.redirect(new URL("/auth/login", request.url));
+    response.cookies.delete("accessToken");
+    response.cookies.delete("refreshToken");
+    return response;
+  }
 }
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+  matcher: [
+    "/((?!api|_next/static|_next/image|favicon.ico|images|auth/login|auth/register).*)",
+  ],
 };
