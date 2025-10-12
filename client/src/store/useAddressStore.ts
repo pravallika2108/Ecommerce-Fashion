@@ -1,5 +1,5 @@
-import { API_ROUTES } from "@/utils/api";
-import axios from "axios";
+// store/useAddressStore.ts
+import { axiosInstance } from "@/lib/axios";
 import { create } from "zustand";
 
 export interface Address {
@@ -30,81 +30,62 @@ export const useAddressStore = create<AddressStore>((set, get) => ({
   addresses: [],
   isLoading: false,
   error: null,
+  
   fetchAddresses: async () => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axios.get(`${API_ROUTES.ADDRESS}/get-address`, {
-        withCredentials: true,
-      });
-
+      const response = await axiosInstance.get("/address/get-address");
       set({ addresses: response.data.address, isLoading: false });
     } catch (e) {
       set({ isLoading: false, error: "Failed to fetch address" });
     }
   },
+  
   createAddress: async (address) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axios.post(
-        `${API_ROUTES.ADDRESS}/add-address`,
-        address,
-        {
-          withCredentials: true,
-        }
-      );
-
+      const response = await axiosInstance.post("/address/add-address", address);
       const newAddress = response.data.address;
-
       set((state) => ({
         addresses: [newAddress, ...state.addresses],
         isLoading: false,
       }));
-
       return newAddress;
     } catch (e) {
-      set({ isLoading: false, error: "Failed to fetch address" });
+      set({ isLoading: false, error: "Failed to create address" });
+      return null;
     }
   },
+  
   updateAddress: async (id, address) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axios.put(
-        `${API_ROUTES.ADDRESS}/update-address/${id}`,
-        address,
-        {
-          withCredentials: true,
-        }
-      );
-
+      const response = await axiosInstance.put(`/address/update-address/${id}`, address);
       const updatedAddress = response.data.address;
-
       set((state) => ({
         addresses: state.addresses.map((item) =>
           item.id === id ? updatedAddress : item
         ),
         isLoading: false,
       }));
-
       return updatedAddress;
     } catch (e) {
-      set({ isLoading: false, error: "Failed to fetch address" });
+      set({ isLoading: false, error: "Failed to update address" });
+      return null;
     }
   },
+  
   deleteAddress: async (id) => {
     set({ isLoading: true, error: null });
     try {
-      await axios.delete(`${API_ROUTES.ADDRESS}/delete-address/${id}`, {
-        withCredentials: true,
-      });
-
+      await axiosInstance.delete(`/address/delete-address/${id}`);
       set((state) => ({
         addresses: state.addresses.filter((address) => address.id !== id),
         isLoading: false,
       }));
-
       return true;
     } catch (e) {
-      set({ isLoading: false, error: "Failed to fetch address" });
+      set({ isLoading: false, error: "Failed to delete address" });
       return false;
     }
   },
