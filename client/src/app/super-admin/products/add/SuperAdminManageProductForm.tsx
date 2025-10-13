@@ -98,29 +98,52 @@ export default function SuperAdminManageProductForm() {
   };
 
   const handleFormSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  event.preventDefault();
 
-    const sanitize = await protectProductFormAction();
-    if (!sanitize.success) {
-      toast({ title: sanitize.error });
-      return;
+  const sanitize = await protectProductFormAction();
+  if (!sanitize.success) {
+    toast({ title: sanitize.error });
+    return;
+  }
+
+  const formData = new FormData();
+  
+  // Only append non-empty values
+  Object.entries(formState).forEach(([key, value]) => {
+    if (value && value.trim() !== '') {
+      formData.append(key, value);
     }
-
-    const formData = new FormData();
-    Object.entries(formState).forEach(([key, value]) => formData.append(key, value));
+  });
+  
+  // Only append if there are selected sizes
+  if (selectedSizes.length > 0) {
     formData.append("sizes", selectedSizes.join(","));
+  }
+  
+  // Only append if there are selected colors
+  if (selectedColors.length > 0) {
     formData.append("colors", selectedColors.join(","));
+  }
 
-    if (!isEditMode) {
-      selectedFiles.forEach((file) => formData.append("images", file));
-    }
+  if (!isEditMode) {
+    selectedFiles.forEach((file) => formData.append("images", file));
+  }
 
-    const result = isEditMode
-      ? await updateProduct(editedProductId, formData)
-      : await createProduct(formData);
+  // Validate that we have at least some data to send
+  if (Array.from(formData.keys()).length === 0) {
+    toast({ 
+      title: "Error", 
+      description: "Please fill in at least one field to update" 
+    });
+    return;
+  }
 
-    if (result) router.push("/super-admin/products/list");
-  };
+  const result = isEditMode
+    ? await updateProduct(editedProductId, formData)
+    : await createProduct(formData);
+
+  if (result) router.push("/super-admin/products/list");
+};
 
   return (
     <div className="p-6">
