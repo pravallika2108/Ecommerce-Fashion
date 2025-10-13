@@ -79,7 +79,7 @@ function HomePage() {
                   <img
                     src={bannerItem.imageUrl}
                     alt={`Banner ${index + 1}`}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-contain"
                     onError={() => handleImageError(bannerItem.imageUrl)}
                   />
                 )}
