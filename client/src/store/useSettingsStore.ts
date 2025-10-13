@@ -23,6 +23,7 @@ interface SettingsState {
   fetchFeaturedProducts: () => Promise<void>;
   addBanners: (files: File[]) => Promise<boolean>;
   updateFeaturedProducts: (productIds: string[]) => Promise<boolean>;
+  deleteBanner: (bannerId: string) => Promise<boolean>;
 }
 
 export const useSettingsStore = create<SettingsState>((set) => ({
@@ -89,8 +90,8 @@ export const useSettingsStore = create<SettingsState>((set) => ({
       return false;
     }
   },
-}));
-deleteBanner: async (bannerId: string) => {
+
+  deleteBanner: async (bannerId: string) => {
     set({ isLoading: true, error: null });
     try {
       const response = await axiosInstance.delete(`/settings/banners/${bannerId}`);
