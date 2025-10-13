@@ -23,6 +23,7 @@ function SuperAdminCouponsPage() {
     fetchFeaturedProducts,
     addBanners,
     updateFeaturedProducts,
+    deleteBanner, // ADD THIS
   } = useSettingsStore();
   const pageLoadRef = useRef(false);
   const { toast } = useToast();
@@ -47,6 +48,23 @@ function SuperAdminCouponsPage() {
 
   const removeImage = (getCurrentIndex: number) => {
     setuploadedFiles((prev) => prev.filter((_, i) => i !== getCurrentIndex));
+  };
+
+  // ADD THIS NEW FUNCTION
+  const handleDeleteBanner = async (bannerId: string) => {
+    if (!confirm("Are you sure you want to delete this banner?")) return;
+    
+    const result = await deleteBanner(bannerId);
+    if (result) {
+      toast({
+        title: "Banner deleted successfully",
+      });
+    } else {
+      toast({
+        title: "Failed to delete banner",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleProductSelection = (productId: string) => {
@@ -141,6 +159,8 @@ function SuperAdminCouponsPage() {
               ))}
             </div>
           </div>
+          
+          {/* UPDATED THIS SECTION - ADDED DELETE BUTTON */}
           <div className="grid grid-cols-4 gap-4">
             {banners.map((banner, index) => (
               <div key={banner.id} className="relative group">
@@ -149,9 +169,19 @@ function SuperAdminCouponsPage() {
                   alt={`Banner ${index + 1}`}
                   className="w-full h-32 object-cover rounded-md"
                 />
+                <Button
+                  variant="destructive"
+                  size={"icon"}
+                  onClick={() => handleDeleteBanner(banner.id)}
+                  className="absolute top-2 right-2 hidden group-hover:flex"
+                  disabled={isLoading}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
               </div>
             ))}
           </div>
+          
           <div>
             <h2 className="mb-4">
               Select up to 8 products to feature on client panel
