@@ -97,7 +97,7 @@ export default function SuperAdminManageProductForm() {
     }
   };
 
-  const handleFormSubmit = async (event: FormEvent<HTMLFormElement>) => {
+ const handleFormSubmit = async (event: FormEvent<HTMLFormElement>) => {
   event.preventDefault();
 
   const sanitize = await protectProductFormAction();
@@ -106,43 +106,83 @@ export default function SuperAdminManageProductForm() {
     return;
   }
 
-  const formData = new FormData();
-  
-  // Only append non-empty values
-  Object.entries(formState).forEach(([key, value]) => {
-    if (value && value.trim() !== '') {
-      formData.append(key, value);
-    }
-  });
-  
-  // Only append if there are selected sizes
-  if (selectedSizes.length > 0) {
-    formData.append("sizes", selectedSizes.join(","));
-  }
-  
-  // Only append if there are selected colors
-  if (selectedColors.length > 0) {
-    formData.append("colors", selectedColors.join(","));
-  }
-
-  if (!isEditMode) {
-    selectedFiles.forEach((file) => formData.append("images", file));
-  }
-
-  // Validate that we have at least some data to send
-  if (Array.from(formData.keys()).length === 0) {
+  // Validation for required fields
+  if (!formState.name?.trim() || !formState.brand?.trim() || 
+      !formState.category?.trim() || !formState.gender?.trim() || 
+      !formState.price?.trim() || !formState.stock?.trim()) {
     toast({ 
-      title: "Error", 
-      description: "Please fill in at least one field to update" 
+      title: "Validation Error", 
+      description: "Please fill in all required fields",
+      variant: "destructive"
     });
     return;
   }
 
-  const result = isEditMode
-    ? await updateProduct(editedProductId, formData)
-    : await createProduct(formData);
+  if (selectedSizes.length === 0) {
+    toast({ 
+      title: "Validation Error", 
+      description: "Please select at least one size",
+      variant: "destructive"
+    });
+    return;
+  }
 
-  if (result) router.push("/super-admin/products/list");
+  if (selectedColors.length === 0) {
+    toast({ 
+      title: "Validation Error", 
+      description: "Please select at least one color",
+      variant: "destructive"
+    });
+    return;
+  }
+
+  // For create mode, validate images
+  if (!isEditMode && selectedFiles.length === 0) {
+    toast({ 
+      title: "Validation Error", 
+      description: "Please upload at least one product image",
+      variant: "destructive"
+    });
+    return;
+  }
+
+  const formData = new FormData();
+  
+  // Append all form fields (they're validated above, so we know they exist)
+  formData.append("name", formState.name.trim());
+  formData.append("brand", formState.brand.trim());
+  formData.append("description", formState.description.trim());
+  formData.append("category", formState.category.trim());
+  formData.append("gender", formState.gender.trim());
+  formData.append("price", formState.price.trim());
+  formData.append("stock", formState.stock.trim());
+  formData.append("sizes", selectedSizes.join(","));
+  formData.append("colors", selectedColors.join(","));
+
+  // Only append images in create mode
+  if (!isEditMode) {
+    selectedFiles.forEach((file) => formData.append("images", file));
+  }
+
+  try {
+    const result = isEditMode
+      ? await updateProduct(editedProductId, formData)
+      : await createProduct(formData);
+
+    if (result) {
+      toast({
+        title: "Success",
+        description: isEditMode ? "Product updated successfully" : "Product created successfully"
+      });
+      router.push("/super-admin/products/list");
+    }
+  } catch (error) {
+    toast({
+      title: "Error",
+      description: "Failed to save product. Please try again.",
+      variant: "destructive"
+    });
+  }
 };
 
   return (
