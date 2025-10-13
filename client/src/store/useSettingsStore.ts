@@ -90,3 +90,22 @@ export const useSettingsStore = create<SettingsState>((set) => ({
     }
   },
 }));
+deleteBanner: async (bannerId: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await axiosInstance.delete(`/settings/banners/${bannerId}`);
+      
+      // Update local state by removing the deleted banner
+      set((state) => ({
+        banners: state.banners.filter((banner) => banner.id !== bannerId),
+        isLoading: false,
+      }));
+      
+      return response.data.success;
+    } catch (e) {
+      console.error(e);
+      set({ error: "Failed to delete banner", isLoading: false });
+      return false;
+    }
+  },
+}));
