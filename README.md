@@ -53,6 +53,3 @@ Pravallika
 - GitHub: [@pravallika2108](https://github.com/pravallika2108)
 - LinkedIn: [Your LinkedIn]
 
-## 📄 License
-
-MIT License
