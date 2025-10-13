@@ -123,28 +123,57 @@ export const updateProduct = async (
 
     console.log(req.body, "req.body");
 
-    //homework -> you can also implement image update func
+    // ✅ Build update data object with safe checks
+    const updateData: any = {};
 
+    // Add fields only if they are provided and not empty
+    if (name) updateData.name = name;
+    if (brand) updateData.brand = brand;
+    if (category) updateData.category = category;
+    if (description) updateData.description = description;
+    if (gender) updateData.gender = gender;
+
+    // Safe handling for arrays
+    if (sizes && typeof sizes === "string") {
+      updateData.sizes = sizes.split(",").map((s) => s.trim()).filter(Boolean);
+    }
+
+    if (colors && typeof colors === "string") {
+      updateData.colors = colors.split(",").map((c) => c.trim()).filter(Boolean);
+    }
+
+    // Safe handling for numbers
+    if (price !== undefined && price !== null && price !== "") {
+      updateData.price = parseFloat(price);
+    }
+
+    if (stock !== undefined && stock !== null && stock !== "") {
+      updateData.stock = parseInt(stock);
+    }
+
+    if (rating !== undefined && rating !== null && rating !== "") {
+      updateData.rating = parseInt(rating);
+    }
+
+    // Validate that at least one field is being updated
+    if (Object.keys(updateData).length === 0) {
+      res.status(400).json({
+        success: false,
+        message: "No valid fields provided for update",
+      });
+      return;
+    }
+
+    // Update product
     const product = await prisma.product.update({
       where: { id },
-      data: {
-        name,
-        brand,
-        category,
-        description,
-        gender,
-        sizes: sizes.split(","),
-        colors: colors.split(","),
-        price: parseFloat(price),
-        stock: parseInt(stock),
-        rating: parseInt(rating),
-      },
+      data: updateData,
     });
 
     res.status(200).json(product);
   } catch (e) {
-    console.error(e);
-    res.status(500).json({ success: false, message: "Some error occured!" });
+    console.error("Update product error:", e);
+    res.status(500).json({ success: false, message: "Some error occurred!" });
   }
 };
 //delete a product (admin)
