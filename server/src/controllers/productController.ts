@@ -121,39 +121,57 @@ export const updateProduct = async (
       rating,
     } = req.body;
 
-    console.log(req.body, "req.body");
+    console.log("Update request body:", req.body);
+    console.log("Product ID:", id);
 
     // ✅ Build update data object with safe checks
     const updateData: any = {};
 
     // Add fields only if they are provided and not empty
-    if (name) updateData.name = name;
-    if (brand) updateData.brand = brand;
-    if (category) updateData.category = category;
-    if (description) updateData.description = description;
-    if (gender) updateData.gender = gender;
+    if (name && name.trim()) updateData.name = name.trim();
+    if (brand && brand.trim()) updateData.brand = brand.trim();
+    if (category && category.trim()) updateData.category = category.trim();
+    if (description && description.trim()) updateData.description = description.trim();
+    if (gender && gender.trim()) updateData.gender = gender.trim();
 
-    // Safe handling for arrays
-    if (sizes && typeof sizes === "string") {
-      updateData.sizes = sizes.split(",").map((s) => s.trim()).filter(Boolean);
+    // ✅ Safe handling for arrays - this was the issue!
+    if (sizes && typeof sizes === "string" && sizes.trim()) {
+      const sizesArray = sizes.split(",").map((s) => s.trim()).filter(Boolean);
+      if (sizesArray.length > 0) {
+        updateData.sizes = sizesArray;
+      }
     }
 
-    if (colors && typeof colors === "string") {
-      updateData.colors = colors.split(",").map((c) => c.trim()).filter(Boolean);
+    if (colors && typeof colors === "string" && colors.trim()) {
+      const colorsArray = colors.split(",").map((c) => c.trim()).filter(Boolean);
+      if (colorsArray.length > 0) {
+        updateData.colors = colorsArray;
+      }
     }
 
-    // Safe handling for numbers
+    // ✅ Safe handling for numbers
     if (price !== undefined && price !== null && price !== "") {
-      updateData.price = parseFloat(price);
+      const parsedPrice = parseFloat(price);
+      if (!isNaN(parsedPrice) && parsedPrice >= 0) {
+        updateData.price = parsedPrice;
+      }
     }
 
     if (stock !== undefined && stock !== null && stock !== "") {
-      updateData.stock = parseInt(stock);
+      const parsedStock = parseInt(stock);
+      if (!isNaN(parsedStock) && parsedStock >= 0) {
+        updateData.stock = parsedStock;
+      }
     }
 
     if (rating !== undefined && rating !== null && rating !== "") {
-      updateData.rating = parseInt(rating);
+      const parsedRating = parseFloat(rating);
+      if (!isNaN(parsedRating) && parsedRating >= 0 && parsedRating <= 5) {
+        updateData.rating = parsedRating;
+      }
     }
+
+    console.log("Update data prepared:", updateData);
 
     // Validate that at least one field is being updated
     if (Object.keys(updateData).length === 0) {
@@ -164,16 +182,29 @@ export const updateProduct = async (
       return;
     }
 
-    // Update product
+    // ✅ Update product
     const product = await prisma.product.update({
       where: { id },
       data: updateData,
     });
 
+    console.log("Product updated successfully:", product.id);
+
     res.status(200).json(product);
   } catch (e) {
     console.error("Update product error:", e);
-    res.status(500).json({ success: false, message: "Some error occurred!" });
+    
+    // ✅ Better error handling
+    if (e instanceof Error) {
+      console.error("Error message:", e.message);
+      console.error("Error stack:", e.stack);
+    }
+    
+    res.status(500).json({ 
+      success: false, 
+      message: "Failed to update product",
+      error: process.env.NODE_ENV === 'development' ? (e as Error).message : undefined
+    });
   }
 };
 //delete a product (admin)
