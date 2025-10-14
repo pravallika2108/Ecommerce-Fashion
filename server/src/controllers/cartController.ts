@@ -73,12 +73,16 @@ export const addToCart = async (
       data: responseItem,
     });
   } catch (e) {
-    console.error("Add to cart error:", e);
-    res.status(500).json({
-      success: false,
-      message: "Some error occured!",
-    });
+  console.error("Add to cart error:", e instanceof Error ? e.message : e);
+  if (e instanceof Error && e.stack) {
+    console.error(e.stack);
   }
+  res.status(500).json({
+    success: false,
+    message: "Some error occurred!",
+  });
+}
+
 };
 
 export const getCart = async (
