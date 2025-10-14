@@ -117,11 +117,11 @@ npm run dev
 ```
 7. **Access the app**
    
--Frontend:http://localhost:3000
+- Frontend:http://localhost:3000
 
--Backend:http://localhost:3001
+- Backend:http://localhost:3001
 
--Database UI: http://localhost:5555
+- Database UI: http://localhost:5555
 
 
 **Using Docker (Local Development)**
@@ -133,17 +133,17 @@ bashdocker-compose up -d
 
 **Backend Deployment**
 
--Create Web Service on Render
+- Create Web Service on Render
 
--Connect GitHub repository, set root directory to backend
+- Connect GitHub repository, set root directory to backend
 
--Build Command: npm install && npm run build
+- Build Command: npm install && npm run build
 
--Start Command: npm start
+- Start Command: npm start
 
--Add environment variables 
+- Add environment variables 
 
--Connect Render PostgreSQL database
+- Connect Render PostgreSQL database
 
 
 **Frontend Deployment**
