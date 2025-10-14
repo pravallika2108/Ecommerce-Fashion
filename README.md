@@ -16,6 +16,15 @@ A modern full-stack e-commerce platform for fashion clothing and accessories, bu
 - 🖼️ Cloudinary image management
 - 🔒 Arcjet security and rate limiting
 
+**Table Of Contents**
+
+- [Features](#-features)
+- [Tech Stack](#-tech-stack)
+- [Installation](#-installation)
+- [Screenshots](#-screenshots)
+- [Live Demo](#-live-demo)
+- [Author](#-author)
+
 ## 🛠️ Tech Stack
 
 **Frontend:**
