@@ -145,8 +145,7 @@ bashdocker-compose up -d
 - Connect GitHub repository
 - Build Command: npm install && npm run build
 - Start Command: npm start
-
-Add environment variables:
+- Add environment variables:
 
 
 ## 🌐 Live Demo
