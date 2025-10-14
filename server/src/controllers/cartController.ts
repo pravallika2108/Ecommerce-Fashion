@@ -1,6 +1,3 @@
-import { Response } from "express";
-import { AuthenticatedRequest } from "../middleware/authMiddleware";
-import { prisma } from "../server";
 
 import { Response } from "express";
 import { AuthenticatedRequest } from "../middleware/authMiddleware";
