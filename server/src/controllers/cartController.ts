@@ -15,16 +15,17 @@ export const addToCart = async (
         success: false,
         message: "Unauthenticated user",
       });
-
       return;
     }
 
+    // Upsert the cart for the user (create if not exist)
     const cart = await prisma.cart.upsert({
       where: { userId },
       create: { userId },
       update: {},
     });
 
+    // Upsert cart item with composite unique key (cartId + productId + size + color)
     const cartItem = await prisma.cartItem.upsert({
       where: {
         cartId_productId_size_color: {
@@ -41,11 +42,12 @@ export const addToCart = async (
         cartId: cart.id,
         productId,
         quantity,
-        size,
-        color,
+        size: size || null,
+        color: color || null,
       },
     });
 
+    // Fetch product info for response
     const product = await prisma.product.findUnique({
       where: { id: productId },
       select: {
@@ -60,7 +62,7 @@ export const addToCart = async (
       productId: cartItem.productId,
       name: product?.name,
       price: product?.price,
-      image: product?.images[0],
+      image: product?.images[0] || null,
       color: cartItem.color,
       size: cartItem.size,
       quantity: cartItem.quantity,
@@ -71,6 +73,7 @@ export const addToCart = async (
       data: responseItem,
     });
   } catch (e) {
+    console.error("Add to cart error:", e);
     res.status(500).json({
       success: false,
       message: "Some error occured!",
@@ -90,7 +93,6 @@ export const getCart = async (
         success: false,
         message: "Unauthenticated user",
       });
-
       return;
     }
 
@@ -101,18 +103,17 @@ export const getCart = async (
       },
     });
 
-    if (!cart) {
+    if (!cart || cart.items.length === 0) {
       res.json({
-        success: false,
-        messaage: "No Item found in cart",
+        success: true,
         data: [],
+        message: "No items found in cart",
       });
-
       return;
     }
 
     const cartItemsWithProducts = await Promise.all(
-      cart?.items.map(async (item) => {
+      cart.items.map(async (item) => {
         const product = await prisma.product.findUnique({
           where: { id: item.productId },
           select: {
@@ -127,7 +128,7 @@ export const getCart = async (
           productId: item.productId,
           name: product?.name,
           price: product?.price,
-          image: product?.images[0],
+          image: product?.images[0] || null,
           color: item.color,
           size: item.size,
           quantity: item.quantity,
@@ -140,6 +141,7 @@ export const getCart = async (
       data: cartItemsWithProducts,
     });
   } catch (e) {
+    console.error("Get cart error:", e);
     res.status(500).json({
       success: false,
       message: "Failed to fetch cart!",
@@ -160,22 +162,33 @@ export const removeFromCart = async (
         success: false,
         message: "Unauthenticated user",
       });
+      return;
+    }
 
+    // Verify item belongs to user by joining with cart
+    const cartItem = await prisma.cartItem.findUnique({
+      where: { id },
+      include: { cart: true },
+    });
+
+    if (!cartItem || cartItem.cart.userId !== userId) {
+      res.status(404).json({
+        success: false,
+        message: "Cart item not found or unauthorized",
+      });
       return;
     }
 
     await prisma.cartItem.delete({
-      where: {
-        id,
-        cart: { userId },
-      },
+      where: { id },
     });
 
     res.status(200).json({
       success: true,
-      message: "Item is removed from cart",
+      message: "Item removed from cart",
     });
   } catch (e) {
+    console.error("Remove from cart error:", e);
     res.status(500).json({
       success: false,
       message: "Failed to remove from cart!",
@@ -197,15 +210,25 @@ export const updateCartItemQuantity = async (
         success: false,
         message: "Unauthenticated user",
       });
+      return;
+    }
 
+    // Verify item belongs to user
+    const cartItem = await prisma.cartItem.findUnique({
+      where: { id },
+      include: { cart: true },
+    });
+
+    if (!cartItem || cartItem.cart.userId !== userId) {
+      res.status(404).json({
+        success: false,
+        message: "Cart item not found or unauthorized",
+      });
       return;
     }
 
     const updatedItem = await prisma.cartItem.update({
-      where: {
-        id,
-        cart: { userId },
-      },
+      where: { id },
       data: { quantity },
     });
 
@@ -223,7 +246,7 @@ export const updateCartItemQuantity = async (
       productId: updatedItem.productId,
       name: product?.name,
       price: product?.price,
-      image: product?.images[0],
+      image: product?.images[0] || null,
       color: updatedItem.color,
       size: updatedItem.size,
       quantity: updatedItem.quantity,
@@ -234,6 +257,7 @@ export const updateCartItemQuantity = async (
       data: responseItem,
     });
   } catch (e) {
+    console.error("Update cart item error:", e);
     res.status(500).json({
       success: false,
       message: "Failed to update cart item quantity",
@@ -253,7 +277,6 @@ export const clearEntireCart = async (
         success: false,
         message: "Unauthenticated user",
       });
-
       return;
     }
 
@@ -265,12 +288,14 @@ export const clearEntireCart = async (
 
     res.status(200).json({
       success: true,
-      message: "cart cleared successfully!",
+      message: "Cart cleared successfully!",
     });
   } catch (e) {
+    console.error("Clear cart error:", e);
     res.status(500).json({
       success: false,
       message: "Failed to clear cart!",
     });
   }
 };
+
