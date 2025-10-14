@@ -109,7 +109,9 @@ npm run dev
 7. **Access the app**
    
 -Frontend:http://localhost:3000
+
 -Backend:http://localhost:3001
+
 -Database UI: http://localhost:5555
 
 **Using Docker (Local Development)**
