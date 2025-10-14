@@ -133,28 +133,28 @@ bashdocker-compose up -d
 
 **Backend Deployment**
 
-Create Web Service on Render
+-Create Web Service on Render
 
-Connect GitHub repository, set root directory to backend
+-Connect GitHub repository, set root directory to backend
 
-Build Command: npm install && npm run build
+-Build Command: npm install && npm run build
 
-Start Command: npm start
+-Start Command: npm start
 
-Add environment variables 
+-Add environment variables 
 
-Connect Render PostgreSQL database
+-Connect Render PostgreSQL database
 
 
 **Frontend Deployment**
 
-Create Web Service on Render
+-Create Web Service on Render
 
-Connect GitHub repository
+-Connect GitHub repository
 
-Build Command: npm install && npm run build
+-Build Command: npm install && npm run build
 
-Start Command: npm start
+-Start Command: npm start
 
 Add environment variables:
 
