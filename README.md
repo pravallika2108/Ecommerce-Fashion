@@ -148,13 +148,13 @@ bashdocker-compose up -d
 
 **Frontend Deployment**
 
--Create Web Service on Render
+- Create Web Service on Render
 
--Connect GitHub repository
+- Connect GitHub repository
 
--Build Command: npm install && npm run build
+- Build Command: npm install && npm run build
 
--Start Command: npm start
+- Start Command: npm start
 
 Add environment variables:
 
