@@ -52,14 +52,14 @@ cd Ecommerce-Fashion
 2.**Install frontend dependencies**
 
 ```bash
-cd frontend
+cd server
 npm install
 cd ..
 ```
 3.**Install backend dependencies**
 
 ```bash
-cd backend
+cd  client
 npm install
 cd ..
 ```
