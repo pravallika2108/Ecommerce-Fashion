@@ -143,9 +143,9 @@ bashdocker-compose up -d
 
 - Create Web Service on Render
 - Connect GitHub repository
-- Build Command: npm install && npm run build
-- Start Command: npm start
-- Add environment variables:
+- Build Command: cd server && npm install && npm run build && npm run prisma:generate && npx prisma migrate deploy
+- Start Command: cd server && npm start
+- Add environment variables
 
 
 ## 🌐 Live Demo
