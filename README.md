@@ -36,6 +36,7 @@ A modern full-stack e-commerce platform for fashion clothing and accessories, bu
 ## 📦 Installation
 
 **Prerequisites**
+
 -**Node.js 18.x or higher**
 -**npm or yarn**
 -**PostgreSQL 14+**
@@ -96,12 +97,12 @@ Create client/env for local:
 6.**Start development servers**
 Terminal 1 (Backend):
 ```bash
-cd backend
+cd server
 npm run dev
 ```
 Terminal 2 (Frontend):
 ```bash
-cd frontend
+cd client
 npm run dev
 ```
 7.**Access the app**
