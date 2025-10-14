@@ -4,8 +4,6 @@
 
 A modern full-stack e-commerce platform for fashion clothing and accessories, built with Next.js, TypeScript, Express.js, and PostgreSQL.
 
-![ShopVibe Banner](link-to-screenshot-if-you-have-one)
-
 ## 🚀 Features
 
 - 🛒 Shopping cart with multi-variant products (sizes, colors)
@@ -114,6 +112,27 @@ npm run dev
 **Using Docker (Local Development)**
 If you have Docker and Docker Compose installed, run everything in containers:
 bashdocker-compose up -d
+
+**Backend Deployment**
+
+Create Web Service on Render
+Connect GitHub repository, set root directory to backend
+Build Command: npm install && npm run build
+Start Command: npm start
+Add environment variables 
+Connect Render PostgreSQL database
+
+**Frontend Deployment**
+
+Create Web Service on Render
+Connect GitHub repository
+Build Command: npm install && npm run build
+Start Command: npm start
+Add environment variables:
+
+NEXT_PUBLIC_API_URL: Your backend Render URL
+NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: Your cloud name
+
 
 ## 🌐 Live Demo
 
