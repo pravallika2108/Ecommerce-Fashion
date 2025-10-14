@@ -95,6 +95,7 @@ Create client/env for local:
 ```
 
 6. **Start development servers**
+   
 Terminal 1 (Backend):
 ```bash
 cd server
@@ -111,6 +112,7 @@ npm run dev
 -Database UI: http://localhost:5555
 
 **Using Docker (Local Development)**
+
 If you have Docker and Docker Compose installed, run everything in containers:
 bashdocker-compose up -d
 
