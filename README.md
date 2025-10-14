@@ -51,5 +51,5 @@ A modern full-stack e-commerce platform for fashion clothing and accessories, bu
 
 Pravallika
 - GitHub: [@pravallika2108](https://github.com/pravallika2108)
-- LinkedIn: [Your LinkedIn]
+- LinkedIn: www.linkedin.com/in/pravallika-gudipati-b4a91920a
 
