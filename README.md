@@ -37,7 +37,20 @@ A modern full-stack e-commerce platform for fashion clothing and accessories, bu
 
 ## 📦 Installation
 
-[Your installation instructions here]
+**Prerequisites**
+-**Node.js 18.x or higher**
+-**npm or yarn**
+-**PostgreSQL 14+**
+-**Docker Compose (optional, for local development)**
+
+**Local Setup**
+1.**Clone the repository**
+```bash
+git clone https://github.com/pravallika2108/Ecommerce-Fashion.git
+cd Ecommerce-Fashion
+```
+
+
 
 ## 🌐 Live Demo
 
