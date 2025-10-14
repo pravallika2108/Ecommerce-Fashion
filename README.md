@@ -118,31 +118,23 @@ npm run dev
 7. **Access the app**
    
 - Frontend:http://localhost:3000
-
 - Backend:http://localhost:3001
-
 - Database UI: http://localhost:5555
 
 
 **Using Docker (Local Development)**
 
 If you have Docker and Docker Compose installed, run everything in containers:
-
 bashdocker-compose up -d
 
 
 **Backend Deployment**
 
 - Create Web Service on Render
-
 - Connect GitHub repository, set root directory to backend
-
 - Build Command: npm install && npm run build
-
 - Start Command: npm start
-
 - Add environment variables 
-
 - Connect Render PostgreSQL database
 
 
