@@ -88,17 +88,15 @@ function HomePage() {
               <div className="relative h-full container mx-auto px-4 flex items-center">
                 <div className="text-white space-y-6">
                   <span className="text-sm uppercase tracking-wider">
-                    I AM JOHN
+                    DISCOVER YOUR STYLE
                   </span>
                   <h1 className="text-5xl lg:text-7xl font-bold leading-tight">
-                    BEST SELLING
-                    <br />
-                    E-COMMERCE WEBSITE
+                    ELEVATE YOUR WARDROBE
+                   
                   </h1>
                   <p className="text-lg">
-                    A Creative, Flexible, Clean, Easy to use and
-                    <br />
-                    High Performance E-Commerce Theme
+                   Curated collections of premium fashion and accessories for every occasion
+                    
                   </p>
                   <Button className="bg-white text-black hover:bg-gray-100 px-8 py-6 text-lg">
                     SHOP NOW
