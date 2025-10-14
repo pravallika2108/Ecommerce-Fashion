@@ -1,4 +1,4 @@
-import { API_ROUTES } from "@/utils/api";
+
 import { axiosInstance } from "@/lib/axios";
 import debounce from "lodash/debounce";
 import { create } from "zustand";
@@ -51,92 +51,19 @@ export const useCartStore = create<CartStore>((set) => {
       }
     },
 
-    export const addToCart = async (
-  req: AuthenticatedRequest,
-  res: Response
-): Promise<void> => {
-  try {
-    const userId = req.user?.userId;
-    const { productId, quantity, size, color } = req.body;
+    addToCart: async (item) => {
+      set({ isLoading: true, error: null });
+      try {
+        const response = await axiosInstance.post("/cart/add-to-cart", item);
+        set((state) => ({
+          items: [...state.items, response.data.data],
+          isLoading: false,
+        }));
+      } catch (e) {
+        set({ error: "Failed to add to cart", isLoading: false });
+      }
+    },
 
-    if (!userId) {
-      res.status(401).json({
-        success: false,
-        message: "Unauthenticated user",
-      });
-      return;
-    }
-
-    const cart = await prisma.cart.upsert({
-      where: { userId },
-      create: { userId },
-      update: {},
-    });
-
-    // Check if item already exists
-    const existingItem = await prisma.cartItem.findFirst({
-      where: {
-        cartId: cart.id,
-        productId,
-        size: size || null,
-        color: color || null,
-      },
-    });
-
-    let cartItem;
-    if (existingItem) {
-      // Update existing item
-      cartItem = await prisma.cartItem.update({
-        where: { id: existingItem.id },
-        data: {
-          quantity: { increment: quantity },
-        },
-      });
-    } else {
-      // Create new item
-      cartItem = await prisma.cartItem.create({
-        data: {
-          cartId: cart.id,
-          productId,
-          quantity,
-          size: size || null,
-          color: color || null,
-        },
-      });
-    }
-
-    const product = await prisma.product.findUnique({
-      where: { id: productId },
-      select: {
-        name: true,
-        price: true,
-        images: true,
-      },
-    });
-
-    const responseItem = {
-      id: cartItem.id,
-      productId: cartItem.productId,
-      name: product?.name,
-      price: product?.price,
-      image: product?.images[0],
-      color: cartItem.color,
-      size: cartItem.size,
-      quantity: cartItem.quantity,
-    };
-
-    res.status(201).json({
-      success: true,
-      data: responseItem,
-    });
-  } catch (e) {
-    console.error("Add to cart error:", e);
-    res.status(500).json({
-      success: false,
-      message: "Some error occurred!",
-    });
-  }
-};
     removeFromCart: async (id) => {
       set({ isLoading: true, error: null });
       try {
