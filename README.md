@@ -96,12 +96,12 @@ Create client/env for local:
 
 6. **Start development servers**
    
-Terminal 1 (Backend):
+Terminal 1 (Server):
 ```bash
 cd server
 npm run dev
 ```
-Terminal 2 (Frontend):
+Terminal 2 (Client):
 ```bash
 cd client
 npm run dev
