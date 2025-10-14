@@ -8,8 +8,8 @@ interface OrderItem {
   productName: string;
   productCategory: string;
   quantity: number;
-  size?: string;
-  color?: string;
+  size: string | null;    // Changed from string | undefined to string | null
+  color: string | null;   // Changed from string | undefined to string | null
   price: number;
 }
 
