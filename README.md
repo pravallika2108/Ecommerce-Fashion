@@ -131,9 +131,6 @@ Build Command: npm install && npm run build
 Start Command: npm start
 Add environment variables:
 
-NEXT_PUBLIC_API_URL: Your backend Render URL
-NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: Your cloud name
-
 
 ## 🌐 Live Demo
 
