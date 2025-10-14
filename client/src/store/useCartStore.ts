@@ -130,14 +130,13 @@ export const useCartStore = create<CartStore>((set) => {
       data: responseItem,
     });
   } catch (e) {
-    console.error("Add to cart error:", e); // Log the actual error
+    console.error("Add to cart error:", e);
     res.status(500).json({
       success: false,
       message: "Some error occurred!",
     });
   }
 };
-
     removeFromCart: async (id) => {
       set({ isLoading: true, error: null });
       try {
