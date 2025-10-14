@@ -24,7 +24,7 @@ export const addToCart = async (
       update: {},
     });
 
-    // Check if item already exists
+    // Check if item already exists with same product, size, and color
     const existingItem = await prisma.cartItem.findFirst({
       where: {
         cartId: cart.id,
@@ -45,14 +45,18 @@ export const addToCart = async (
       });
     } else {
       // Create new item
+      const createData: any = {
+        cartId: cart.id,
+        productId,
+        quantity,
+      };
+
+      // Only add size/color if they're provided
+      if (size) createData.size = size;
+      if (color) createData.color = color;
+
       cartItem = await prisma.cartItem.create({
-        data: {
-          cartId: cart.id,
-          productId,
-          quantity,
-          size: size || null,
-          color: color || null,
-        },
+        data: createData,
       });
     }
 
