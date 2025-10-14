@@ -8,7 +8,7 @@ export const addToCart = async (
 ): Promise<void> => {
   try {
     const userId = req.user?.userId;
-    const { productId, quantity, size, color } = req.body;
+    let { productId, quantity, size, color } = req.body;
 
     if (!userId) {
       res.status(401).json({
@@ -17,6 +17,19 @@ export const addToCart = async (
       });
       return;
     }
+
+    // Validate required fields
+    if (!productId || !quantity) {
+      res.status(400).json({
+        success: false,
+        message: "Product ID and quantity are required",
+      });
+      return;
+    }
+
+    // Normalize size and color - convert empty strings and undefined to null
+    size = size && typeof size === "string" && size.trim() ? size.trim() : null;
+    color = color && typeof color === "string" && color.trim() ? color.trim() : null;
 
     const cart = await prisma.cart.upsert({
       where: { userId },
@@ -29,14 +42,14 @@ export const addToCart = async (
       where: {
         cartId: cart.id,
         productId,
-        size: size || null,
-        color: color || null,
+        size,
+        color,
       },
     });
 
     let cartItem;
     if (existingItem) {
-      // Update existing item
+      // Update existing item - increment quantity
       cartItem = await prisma.cartItem.update({
         where: { id: existingItem.id },
         data: {
@@ -45,21 +58,18 @@ export const addToCart = async (
       });
     } else {
       // Create new item
-      const createData: any = {
-        cartId: cart.id,
-        productId,
-        quantity,
-      };
-
-      // Only add size/color if they're provided
-      if (size) createData.size = size;
-      if (color) createData.color = color;
-
       cartItem = await prisma.cartItem.create({
-        data: createData,
+        data: {
+          cartId: cart.id,
+          productId,
+          quantity,
+          size,
+          color,
+        },
       });
     }
 
+    // Fetch product details
     const product = await prisma.product.findUnique({
       where: { id: productId },
       select: {
@@ -69,12 +79,20 @@ export const addToCart = async (
       },
     });
 
+    if (!product) {
+      res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
+      return;
+    }
+
     const responseItem = {
       id: cartItem.id,
       productId: cartItem.productId,
-      name: product?.name,
-      price: product?.price,
-      image: product?.images[0],
+      name: product.name,
+      price: product.price,
+      image: product.images?.[0] || null,
       color: cartItem.color,
       size: cartItem.size,
       quantity: cartItem.quantity,
@@ -125,7 +143,7 @@ export const getCart = async (
     }
 
     const cartItemsWithProducts = await Promise.all(
-      cart?.items.map(async (item) => {
+      cart.items.map(async (item) => {
         const product = await prisma.product.findUnique({
           where: { id: item.productId },
           select: {
@@ -140,7 +158,7 @@ export const getCart = async (
           productId: item.productId,
           name: product?.name,
           price: product?.price,
-          image: product?.images[0],
+          image: product?.images?.[0] || null,
           color: item.color,
           size: item.size,
           quantity: item.quantity,
@@ -153,6 +171,7 @@ export const getCart = async (
       data: cartItemsWithProducts,
     });
   } catch (e) {
+    console.error("Fetch cart error:", e);
     res.status(500).json({
       success: false,
       message: "Failed to fetch cart!",
@@ -176,6 +195,14 @@ export const removeFromCart = async (
       return;
     }
 
+    if (!id) {
+      res.status(400).json({
+        success: false,
+        message: "Cart item ID is required",
+      });
+      return;
+    }
+
     await prisma.cartItem.delete({
       where: {
         id,
@@ -188,6 +215,7 @@ export const removeFromCart = async (
       message: "Item is removed from cart",
     });
   } catch (e) {
+    console.error("Remove from cart error:", e);
     res.status(500).json({
       success: false,
       message: "Failed to remove from cart!",
@@ -208,6 +236,14 @@ export const updateCartItemQuantity = async (
       res.status(401).json({
         success: false,
         message: "Unauthenticated user",
+      });
+      return;
+    }
+
+    if (!id || !quantity) {
+      res.status(400).json({
+        success: false,
+        message: "Cart item ID and quantity are required",
       });
       return;
     }
@@ -234,7 +270,7 @@ export const updateCartItemQuantity = async (
       productId: updatedItem.productId,
       name: product?.name,
       price: product?.price,
-      image: product?.images[0],
+      image: product?.images?.[0] || null,
       color: updatedItem.color,
       size: updatedItem.size,
       quantity: updatedItem.quantity,
@@ -245,6 +281,7 @@ export const updateCartItemQuantity = async (
       data: responseItem,
     });
   } catch (e) {
+    console.error("Update cart quantity error:", e);
     res.status(500).json({
       success: false,
       message: "Failed to update cart item quantity",
@@ -278,6 +315,7 @@ export const clearEntireCart = async (
       message: "cart cleared successfully!",
     });
   } catch (e) {
+    console.error("Clear cart error:", e);
     res.status(500).json({
       success: false,
       message: "Failed to clear cart!",
