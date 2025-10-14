@@ -64,7 +64,56 @@ cd backend
 npm install
 cd ..
 ```
+4.**Create environment files**
+Create server/.env: for local:
 
+```bash
+   DATABASE_URL=postgresql://user:password@localhost:5437/ecommerce_fashion
+   JWT_SECRET=your_jwt_secret_key_here
+   PAYPAL_CLIENT_ID=your_paypal_client_id
+   PAYPAL_SECRET=your_paypal_secret
+   CLOUDINARY_API_KEY=your_cloudinary_api_key
+   CLOUDINARY_API_SECRET=your_cloudinary_api_secret
+   CLOUDINARY_CLOUD_NAME= your_cloudinary_cloud_name
+   PORT=3001
+   FRONTEND_URL=localhost:3000
+   NODE_ENV= development
+```
+Create client/env for local:
+
+```bash
+   JWT_SECRET = your_jwt_secret_key_here
+   ARCJET_KEY =your_arcjet_key
+```
+
+5.**Set up database**
+
+```bash
+   createdb ecommerce_fashion
+   cd server
+   npx prisma migrate dev --name init
+   cd ..
+```
+
+6.**Start development servers**
+Terminal 1 (Backend):
+```bash
+cd backend
+npm run dev
+```
+Terminal 2 (Frontend):
+```bash
+cd frontend
+npm run dev
+```
+7.**Access the app**
+-Frontend:http://localhost:3000
+-Backend:http://localhost:3001
+-Database UI: http://localhost:5555
+
+**Using Docker (Local Development)**
+If you have Docker and Docker Compose installed, run everything in containers:
+bashdocker-compose up -d
 
 ## 🌐 Live Demo
 
