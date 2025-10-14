@@ -44,26 +44,26 @@ A modern full-stack e-commerce platform for fashion clothing and accessories, bu
 
 **Local Setup**
 
-1.**Clone the repository**
+1. **Clone the repository**
 ```bash
 git clone https://github.com/pravallika2108/Ecommerce-Fashion.git
 cd Ecommerce-Fashion
 ```
-2.**Install frontend dependencies**
+2. **Install frontend dependencies**
 
 ```bash
 cd server
 npm install
 cd ..
 ```
-3.**Install backend dependencies**
+3. **Install backend dependencies**
 
 ```bash
 cd  client
 npm install
 cd ..
 ```
-4.**Create environment files**
+4. **Create environment files**
 Create server/.env: for local:
 
 ```bash
@@ -85,7 +85,7 @@ Create client/env for local:
    ARCJET_KEY =your_arcjet_key
 ```
 
-5.**Set up database**
+5. **Set up database**
 
 ```bash
    createdb ecommerce_fashion
@@ -94,7 +94,7 @@ Create client/env for local:
    cd ..
 ```
 
-6.**Start development servers**
+6. **Start development servers**
 Terminal 1 (Backend):
 ```bash
 cd server
@@ -105,7 +105,7 @@ Terminal 2 (Frontend):
 cd client
 npm run dev
 ```
-7.**Access the app**
+7. **Access the app**
 -Frontend:http://localhost:3000
 -Backend:http://localhost:3001
 -Database UI: http://localhost:5555
