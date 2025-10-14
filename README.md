@@ -125,6 +125,7 @@ npm run dev
 **Using Docker (Local Development)**
 
 If you have Docker and Docker Compose installed, run everything in containers:
+
 bashdocker-compose up -d
 
 
@@ -141,11 +142,8 @@ bashdocker-compose up -d
 **Frontend Deployment**
 
 - Create Web Service on Render
-
 - Connect GitHub repository
-
 - Build Command: npm install && npm run build
-
 - Start Command: npm start
 
 Add environment variables:
