@@ -114,10 +114,13 @@ npm run dev
 
 -Database UI: http://localhost:5555
 
+
 **Using Docker (Local Development)**
 
 If you have Docker and Docker Compose installed, run everything in containers:
+
 bashdocker-compose up -d
+
 
 **Backend Deployment**
 
@@ -132,6 +135,7 @@ Start Command: npm start
 Add environment variables 
 
 Connect Render PostgreSQL database
+
 
 **Frontend Deployment**
 
