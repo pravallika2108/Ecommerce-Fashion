@@ -1,4 +1,4 @@
-import { axiosInstance } from "@/lib/axios"; // use the configured axios wrapper
+import { axiosInstance } from "@/lib/axios";
 import debounce from "lodash/debounce";
 import { create } from "zustand";
 
@@ -8,8 +8,8 @@ export interface CartItem {
   name: string;
   price: number;
   image: string;
-  color: string | null;
-  size: string | null;
+  color: string;
+  size: string;
   quantity: number;
 }
 
@@ -54,18 +54,16 @@ export const useCartStore = create<CartStore>((set, get) => {
     addToCart: async (item) => {
       set({ isLoading: true, error: null });
       try {
-        const payload = {
+        const payload: any = {
           productId: item.productId,
-          name: item.name,
-          price: item.price,
-          image: item.image,
           quantity: item.quantity,
-          color: item.color ?? null,
-          size: item.size ?? null,
         };
 
-        const response = await axiosInstance.post("/cart/add-to-cart", payload);
+        // Only add color/size if they exist
+        if (item.color) payload.color = item.color;
+        if (item.size) payload.size = item.size;
 
+        const response = await axiosInstance.post("/cart/add-to-cart", payload);
         set((state) => ({
           items: [...state.items, response.data.data],
           isLoading: false,
@@ -111,4 +109,3 @@ export const useCartStore = create<CartStore>((set, get) => {
     },
   };
 });
-
