@@ -19,8 +19,8 @@ const app = express();
 app.use(
   cors({
     origin: [
-      process.env.FRONTEND_URL|| "https://ecommerce-fashion-1.onrender.com", // Frontend
-      "http://localhost:3000", // Local development
+      process.env.FRONTEND_URL, // Frontend
+      // Local development
     ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
