@@ -1,7 +1,7 @@
 // app/api/[...path]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL ;
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL||"https://ecommerce-fashion-1-bboc.onrender.com" ;
 console.log("backend url",BACKEND_URL)
 export async function POST(request: NextRequest) {
   return proxyRequest('POST', request);
