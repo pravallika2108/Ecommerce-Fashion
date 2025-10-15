@@ -19,5 +19,7 @@ export const colors = [
   { name: "Blue", hex: "#3b82f6" },
   { name: "Red", hex: "#ef4444" },
   { name: "Brown", hex: "#78350f" },
+  { name: "Black", hex: "#000000" }
+
 ];
 export const brands = ["Zeviora", "Quivano", "Trevico", "Fynsera", "Sylvora"];
