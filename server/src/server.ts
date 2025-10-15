@@ -19,7 +19,7 @@ const app = express();
 app.use(
   cors({
     origin: [
-      process.env.FRONTEND_URL, // Frontend
+      process.env.FRONTEND_URL||https://ecommerce-fashion-1-bboc.onrender.com, // Frontend
       // Local development
     ],
     credentials: true,
