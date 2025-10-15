@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL ;
-
+console.log("backend url",BACKEND_URL)
 export async function POST(request: NextRequest) {
   return proxyRequest('POST', request);
 }
