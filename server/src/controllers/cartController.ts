@@ -10,15 +10,7 @@ export const addToCart = async (
     const userId = req.user?.userId;
     let { productId, quantity, size, color } = req.body;
 
-    console.log("\n=== ADD TO CART DEBUG START ===");
-    console.log("1. User ID:", userId);
-    console.log("2. Request Body:", JSON.stringify(req.body, null, 2));
-    console.log("3. ProductId:", productId, "Quantity:", quantity);
-    console.log("4. Size received:", size, "Type:", typeof size);
-    console.log("5. Color received:", color, "Type:", typeof color);
-
     if (!userId) {
-      console.log("❌ ERROR: No userId found");
       res.status(401).json({
         success: false,
         message: "Unauthenticated user",
@@ -26,8 +18,7 @@ export const addToCart = async (
       return;
     }
 
-    // Fetch product
-    console.log("6. Fetching product with ID:", productId);
+    // Fetch product to get default size/color if not provided
     const product = await prisma.product.findUnique({
       where: { id: productId },
       select: {
@@ -39,16 +30,7 @@ export const addToCart = async (
       },
     });
 
-    console.log("7. Product found:", product ? "✅ YES" : "❌ NO");
-    if (product) {
-      console.log("8. Product details:");
-      console.log("   - Name:", product.name);
-      console.log("   - Sizes:", product.sizes, "Length:", product.sizes?.length);
-      console.log("   - Colors:", product.colors, "Length:", product.colors?.length);
-    }
-
     if (!product) {
-      console.log("❌ ERROR: Product not found in database");
       res.status(404).json({
         success: false,
         message: "Product not found",
@@ -56,80 +38,43 @@ export const addToCart = async (
       return;
     }
 
-    // If size/color not provided, use first available (default)
-    const originalSize = size;
-    const originalColor = color;
+    // Filter out empty strings from product arrays
+    const validSizes = product.sizes.filter(s => s && s.trim() !== '');
+    const validColors = product.colors.filter(c => c && c.trim() !== '');
 
-    if (!size && product.sizes && product.sizes.length > 0) {
-      size = product.sizes[0];
-      console.log("9. Size was empty, using default:", size);
-    } else {
-      console.log("9. Using provided size:", size);
+    // Use provided size/color or first valid one, or default
+    if (!size || size.trim() === '') {
+      size = validSizes.length > 0 ? validSizes[0] : 'ONE SIZE';
+    }
+    
+    if (!color || color.trim() === '') {
+      color = validColors.length > 0 ? validColors[0] : 'DEFAULT';
     }
 
-    if (!color && product.colors && product.colors.length > 0) {
-      color = product.colors[0];
-      console.log("10. Color was empty, using default:", color);
-    } else {
-      console.log("10. Using provided color:", color);
-    }
-
-    console.log("11. Final values - Size:", size, "Color:", color);
-
-    // Validate that we have size and color
-    if (!size || !color) {
-      console.log("❌ ERROR: Missing size or color after defaults");
-      console.log("   - Size:", size);
-      console.log("   - Color:", color);
+    // Final validation
+    if (!size || size.trim() === '' || !color || color.trim() === '') {
       res.status(400).json({
         success: false,
-        message: "Product must have at least one size and color",
+        message: "Invalid size or color for this product",
       });
       return;
     }
 
-    // Upsert the cart
-    console.log("12. Upserting cart for user:", userId);
+    // Upsert the cart for the user
     const cart = await prisma.cart.upsert({
       where: { userId },
       create: { userId },
       update: {},
     });
-    console.log("13. Cart ID:", cart.id);
 
-    // Check if cart item already exists
-    console.log("14. Looking for existing cart item with:");
-    console.log("   - cartId:", cart.id);
-    console.log("   - productId:", productId);
-    console.log("   - size:", size);
-    console.log("   - color:", color);
-
-    const existingItem = await prisma.cartItem.findUnique({
-      where: {
-        cartId_productId_size_color: {
-          cartId: cart.id,
-          productId,
-          size: size,
-          color: color,
-        },
-      },
-    });
-
-    console.log("15. Existing cart item:", existingItem ? "✅ FOUND (will update)" : "❌ NOT FOUND (will create)");
-    if (existingItem) {
-      console.log("    Current quantity:", existingItem.quantity);
-      console.log("    Will increment by:", quantity);
-    }
-
-    // Upsert cart item
-    console.log("16. Upserting cart item...");
+    // Upsert cart item with actual values
     const cartItem = await prisma.cartItem.upsert({
       where: {
         cartId_productId_size_color: {
           cartId: cart.id,
           productId,
-          size: size,
-          color: color,
+          size: size.trim(),
+          color: color.trim(),
         },
       },
       update: {
@@ -139,16 +84,10 @@ export const addToCart = async (
         cartId: cart.id,
         productId,
         quantity,
-        size: size,
-        color: color,
+        size: size.trim(),
+        color: color.trim(),
       },
     });
-
-    console.log("17. ✅ Cart item upserted successfully!");
-    console.log("    - ID:", cartItem.id);
-    console.log("    - Quantity:", cartItem.quantity);
-    console.log("    - Size:", cartItem.size);
-    console.log("    - Color:", cartItem.color);
 
     const responseItem = {
       id: cartItem.id,
@@ -161,26 +100,18 @@ export const addToCart = async (
       quantity: cartItem.quantity,
     };
 
-    console.log("18. Sending success response");
-    console.log("=== ADD TO CART DEBUG END ===\n");
-
     res.status(201).json({
       success: true,
       data: responseItem,
     });
   } catch (e) {
-    console.log("\n❌❌❌ FATAL ERROR IN ADD TO CART ❌❌❌");
-    console.error("Error type:", e instanceof Error ? e.constructor.name : typeof e);
-    console.error("Error message:", e instanceof Error ? e.message : e);
+    console.error("Add to cart error:", e instanceof Error ? e.message : e);
     if (e instanceof Error && e.stack) {
-      console.error("Stack trace:", e.stack);
+      console.error(e.stack);
     }
-    console.log("=== ADD TO CART DEBUG END (ERROR) ===\n");
-    
     res.status(500).json({
       success: false,
       message: "Some error occurred!",
-      error: e instanceof Error ? e.message : "Unknown error",
     });
   }
 };
