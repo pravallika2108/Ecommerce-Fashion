@@ -50,51 +50,7 @@ app.use("/api/order", orderRoutes);
 app.get("/", (req, res) => {
   res.send("Hello from E-Commerce backend");
 });
-// Temporary cleanup route - REMOVE after running once
-app.get('/api/cleanup-database', async (req, res) => {
-  try {
-    console.log('Starting cleanup...');
-    
-    // Delete invalid cart items
-    const deletedItems = await prisma.cartItem.deleteMany({
-      where: {
-        OR: [
-          { size: '' },
-          { color: '' },
-        ],
-      },
-    });
-    
-    // Fix products
-    const products = await prisma.product.findMany();
-    let fixedCount = 0;
-    
-    for (const product of products) {
-      const validSizes = product.sizes.filter(s => s && s.trim() !== '');
-      const validColors = product.colors.filter(c => c && c.trim() !== '');
-      
-      if (validSizes.length === 0 || validColors.length === 0) {
-        await prisma.product.update({
-          where: { id: product.id },
-          data: {
-            sizes: validSizes.length > 0 ? validSizes : ['ONE SIZE'],
-            colors: validColors.length > 0 ? validColors : ['DEFAULT'],
-          },
-        });
-        fixedCount++;
-      }
-    }
-    
-    res.json({
-      success: true,
-      message: 'Cleanup complete',
-      deletedCartItems: deletedItems.count,
-      fixedProducts: fixedCount
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+
 app.listen(PORT, () => {
   console.log(`Server is now running on port ${PORT}`);
 });
