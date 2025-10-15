@@ -124,56 +124,80 @@ export const updateProduct = async (
     console.log("Update request body:", req.body);
     console.log("Product ID:", id);
 
-    // ✅ Build update data object with safe checks
     const updateData: any = {};
 
-    // Add fields only if they are provided and not empty
-    if (name && name.trim()) updateData.name = name.trim();
-    if (brand && brand.trim()) updateData.brand = brand.trim();
-    if (category && category.trim()) updateData.category = category.trim();
-    if (description && description.trim()) updateData.description = description.trim();
-    if (gender && gender.trim()) updateData.gender = gender.trim();
+    // String fields - accept if provided and not just whitespace
+    if (name !== undefined && name !== null && String(name).trim() !== '') {
+      updateData.name = String(name).trim();
+    }
+    if (brand !== undefined && brand !== null && String(brand).trim() !== '') {
+      updateData.brand = String(brand).trim();
+    }
+    if (category !== undefined && category !== null && String(category).trim() !== '') {
+      updateData.category = String(category).trim();
+    }
+    if (description !== undefined && description !== null && String(description).trim() !== '') {
+      updateData.description = String(description).trim();
+    }
+    if (gender !== undefined && gender !== null && String(gender).trim() !== '') {
+      updateData.gender = String(gender).trim();
+    }
 
-    // ✅ Safe handling for arrays - this was the issue!
-    if (sizes && typeof sizes === "string" && sizes.trim()) {
-      const sizesArray = sizes.split(",").map((s) => s.trim()).filter(Boolean);
+    // Array fields - handle both string (comma-separated) and array inputs
+    if (sizes !== undefined && sizes !== null) {
+      let sizesArray: string[] = [];
+      
+      if (typeof sizes === 'string' && sizes.trim() !== '') {
+        sizesArray = sizes.split(",").map((s) => s.trim()).filter(Boolean);
+      } else if (Array.isArray(sizes)) {
+        sizesArray = sizes.map((s) => String(s).trim()).filter(Boolean);
+      }
+      
       if (sizesArray.length > 0) {
         updateData.sizes = sizesArray;
       }
     }
 
-    if (colors && typeof colors === "string" && colors.trim()) {
-      const colorsArray = colors.split(",").map((c) => c.trim()).filter(Boolean);
+    if (colors !== undefined && colors !== null) {
+      let colorsArray: string[] = [];
+      
+      if (typeof colors === 'string' && colors.trim() !== '') {
+        colorsArray = colors.split(",").map((c) => c.trim()).filter(Boolean);
+      } else if (Array.isArray(colors)) {
+        colorsArray = colors.map((c) => String(c).trim()).filter(Boolean);
+      }
+      
       if (colorsArray.length > 0) {
         updateData.colors = colorsArray;
       }
     }
 
-    // ✅ Safe handling for numbers
-    if (price !== undefined && price !== null && price !== "") {
-      const parsedPrice = parseFloat(price);
+    // Number fields
+    if (price !== undefined && price !== null && String(price).trim() !== '') {
+      const parsedPrice = parseFloat(String(price));
       if (!isNaN(parsedPrice) && parsedPrice >= 0) {
         updateData.price = parsedPrice;
       }
     }
 
-    if (stock !== undefined && stock !== null && stock !== "") {
-      const parsedStock = parseInt(stock);
+    if (stock !== undefined && stock !== null && String(stock).trim() !== '') {
+      const parsedStock = parseInt(String(stock));
       if (!isNaN(parsedStock) && parsedStock >= 0) {
         updateData.stock = parsedStock;
       }
     }
 
-    if (rating !== undefined && rating !== null && rating !== "") {
-      const parsedRating = parseFloat(rating);
+    if (rating !== undefined && rating !== null && String(rating).trim() !== '') {
+      const parsedRating = parseFloat(String(rating));
       if (!isNaN(parsedRating) && parsedRating >= 0 && parsedRating <= 5) {
         updateData.rating = parsedRating;
       }
     }
 
     console.log("Update data prepared:", updateData);
+    console.log("Number of fields to update:", Object.keys(updateData).length);
 
-    // Validate that at least one field is being updated
+    // Check if there's anything to update
     if (Object.keys(updateData).length === 0) {
       res.status(400).json({
         success: false,
@@ -182,7 +206,7 @@ export const updateProduct = async (
       return;
     }
 
-    // ✅ Update product
+    // Update the product
     const product = await prisma.product.update({
       where: { id },
       data: updateData,
@@ -190,11 +214,14 @@ export const updateProduct = async (
 
     console.log("Product updated successfully:", product.id);
 
-    res.status(200).json(product);
+    res.status(200).json({
+      success: true,
+      product,
+      message: "Product updated successfully",
+    });
   } catch (e) {
     console.error("Update product error:", e);
     
-    // ✅ Better error handling
     if (e instanceof Error) {
       console.error("Error message:", e.message);
       console.error("Error stack:", e.stack);
