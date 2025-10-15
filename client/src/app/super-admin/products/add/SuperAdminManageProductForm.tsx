@@ -252,17 +252,21 @@ export default function SuperAdminManageProductForm() {
           <div>
             <Label>Colors</Label>
             <div className="flex flex-wrap gap-2">
-              {colors.map((c) => (
-                <Button
-                  key={c.name}
-                  type="button"
-                  className={`h-8 w-8 rounded-full ${c.class} ${
-                    selectedColors.includes(c.name) ? "ring-2 ring-primary" : ""
-                  }`}
-                  onClick={() => handleToggleColor(c.name)}
-                />
-              ))}
-            </div>
+    {colors.map((c) => (
+      <Button
+        key={c.name}
+        type="button"
+        style={{ backgroundColor: c.hex }}
+        className={`h-8 w-8 rounded-full p-0 hover:opacity-80 ${
+          c.border ? 'border-2 border-gray-400' : ''
+        } ${
+          selectedColors.includes(c.name) ? "ring-2 ring-offset-2 ring-blue-500" : ""
+        }`}
+        onClick={() => handleToggleColor(c.name)}
+        title={c.name}
+      />
+    ))}
+  </div>
           </div>
 
           <div>
