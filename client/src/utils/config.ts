@@ -17,6 +17,7 @@ export const colors = [
   { name: "Pink", class: "bg-pink-500" },
   { name: "Cyan", class: "bg-cyan-500" },
   { name: "Blue", class: "bg-blue-500" },
-  { name: "Red", class: "bg-red-500" }, // Tailwind red
+  { name: "Red", class: "bg-red-500" },
+   { name: "Brown", class: "bg-amber-900" },// Tailwind red
 ];
 export const brands = ["Zeviora", "Quivano", "Trevico", "Fynsera", "Sylvora"];
