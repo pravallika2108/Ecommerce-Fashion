@@ -8,12 +8,49 @@ export const addToCart = async (
 ): Promise<void> => {
   try {
     const userId = req.user?.userId;
-    const { productId, quantity, size, color } = req.body;
+    let { productId, quantity, size, color } = req.body;
 
     if (!userId) {
       res.status(401).json({
         success: false,
         message: "Unauthenticated user",
+      });
+      return;
+    }
+
+    // CHANGE 1: Fetch product to get default size/color if not provided
+    const product = await prisma.product.findUnique({
+      where: { id: productId },
+      select: {
+        name: true,
+        price: true,
+        images: true,
+        sizes: true,
+        colors: true,
+      },
+    });
+
+    if (!product) {
+      res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
+      return;
+    }
+
+    // CHANGE 2: If size/color not provided, use first available (default)
+    if (!size && product.sizes.length > 0) {
+      size = product.sizes[0];
+    }
+    if (!color && product.colors.length > 0) {
+      color = product.colors[0];
+    }
+
+    // Validate that we have size and color
+    if (!size || !color) {
+      res.status(400).json({
+        success: false,
+        message: "Product must have at least one size and color",
       });
       return;
     }
@@ -25,14 +62,14 @@ export const addToCart = async (
       update: {},
     });
 
-    // Upsert cart item with composite unique key (cartId + productId + size + color)
+    // CHANGE 3: Now using actual size/color values (not null)
     const cartItem = await prisma.cartItem.upsert({
       where: {
         cartId_productId_size_color: {
           cartId: cart.id,
           productId,
-          size: size || null,
-          color: color || null,
+          size: size,
+          color: color,
         },
       },
       update: {
@@ -42,27 +79,18 @@ export const addToCart = async (
         cartId: cart.id,
         productId,
         quantity,
-        size: size || null,
-        color: color || null,
+        size: size,
+        color: color,
       },
     });
 
-    // Fetch product info for response
-    const product = await prisma.product.findUnique({
-      where: { id: productId },
-      select: {
-        name: true,
-        price: true,
-        images: true,
-      },
-    });
-
+    // CHANGE 4: Use product data we already fetched
     const responseItem = {
       id: cartItem.id,
       productId: cartItem.productId,
-      name: product?.name,
-      price: product?.price,
-      image: product?.images[0] || null,
+      name: product.name,
+      price: product.price,
+      image: product.images[0] || null,
       color: cartItem.color,
       size: cartItem.size,
       quantity: cartItem.quantity,
@@ -73,16 +101,15 @@ export const addToCart = async (
       data: responseItem,
     });
   } catch (e) {
-  console.error("Add to cart error:", e instanceof Error ? e.message : e);
-  if (e instanceof Error && e.stack) {
-    console.error(e.stack);
+    console.error("Add to cart error:", e instanceof Error ? e.message : e);
+    if (e instanceof Error && e.stack) {
+      console.error(e.stack);
+    }
+    res.status(500).json({
+      success: false,
+      message: "Some error occurred!",
+    });
   }
-  res.status(500).json({
-    success: false,
-    message: "Some error occurred!",
-  });
-}
-
 };
 
 export const getCart = async (
@@ -169,7 +196,6 @@ export const removeFromCart = async (
       return;
     }
 
-    // Verify item belongs to user by joining with cart
     const cartItem = await prisma.cartItem.findUnique({
       where: { id },
       include: { cart: true },
@@ -217,7 +243,6 @@ export const updateCartItemQuantity = async (
       return;
     }
 
-    // Verify item belongs to user
     const cartItem = await prisma.cartItem.findUnique({
       where: { id },
       include: { cart: true },
@@ -302,4 +327,3 @@ export const clearEntireCart = async (
     });
   }
 };
-
