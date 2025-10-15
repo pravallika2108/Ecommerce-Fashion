@@ -1,9 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -61,8 +58,8 @@ model CartItem {
   cart      Cart     @relation(fields: [cartId], references: [id])
   productId String
   quantity  Int
-  size      String?
-  color     String?
+  size      String
+  color     String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -137,8 +134,8 @@ model OrderItem {
   productName     String
   productCategory String
   quantity        Int
-  size            String?
-  color           String?
+  size            String
+  color           String
   price           Float
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
