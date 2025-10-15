@@ -9,15 +9,15 @@ export const categories = [
 ];
 export const sizes = ["XS", "S", "M", "L", "XL", "XXL", "3XL"];
 export const colors = [
-  { name: "Navy", class: "bg-blue-900" }, // approximate navy
-  { name: "Yellow", class: "bg-yellow-400" },
-  { name: "White", class: "bg-white border" },
-  { name: "Orange", class: "bg-orange-400" },
-  { name: "Green", class: "bg-green-500" },
-  { name: "Pink", class: "bg-pink-500" },
-  { name: "Cyan", class: "bg-cyan-500" },
-  { name: "Blue", class: "bg-blue-500" },
-  { name: "Red", class: "bg-red-500" },
-   { name: "Brown", class: "bg-amber-900" },// Tailwind red
+  { name: "Navy", hex: "#1e3a8a" },
+  { name: "Yellow", hex: "#facc15" },
+  { name: "White", hex: "#ffffff", border: true },
+  { name: "Orange", hex: "#fb923c" },
+  { name: "Green", hex: "#22c55e" },
+  { name: "Pink", hex: "#ec4899" },
+  { name: "Cyan", hex: "#06b6d4" },
+  { name: "Blue", hex: "#3b82f6" },
+  { name: "Red", hex: "#ef4444" },
+  { name: "Brown", hex: "#78350f" },
 ];
 export const brands = ["Zeviora", "Quivano", "Trevico", "Fynsera", "Sylvora"];
