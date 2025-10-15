@@ -17,6 +17,6 @@ export const colors = [
   { name: "Pink", class: "bg-[#EC4899]" },
   { name: "Cyan", class: "bg-[#06B6D4]" },
   { name: "Blue", class: "bg-[#3B82F6]" },
-   { name: "Blue", class: "bg-[#ff3333]" },
+   { name: "Red", class: "bg-[#ff3333]" },
 ];
 export const brands = ["Zeviora", "Quivano", "Trevico", "Fynsera", "Sylvora"];
