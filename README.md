@@ -154,7 +154,7 @@ bashdocker-compose up -d
 
 ## 📸 Screenshots
 
-[Add screenshots of your website]
+
 
 ## 👨‍💻 Author
 
