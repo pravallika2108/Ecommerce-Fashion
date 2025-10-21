@@ -46,13 +46,13 @@ A modern full-stack e-commerce platform for fashion clothing and accessories, bu
 
 **Prerequisites**
 
--Node.js 18.x or higher
+- Node.js 18.x or higher
 
--npm or yarn
+- npm or yarn
 
--PostgreSQL 14+
+- PostgreSQL 14+
 
--Docker Compose (optional, for local development)
+- Docker Compose (optional, for local development)
 
 **Local Setup**
 
