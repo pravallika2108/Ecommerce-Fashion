@@ -58,14 +58,14 @@ A modern full-stack e-commerce platform for fashion clothing and accessories, bu
 git clone https://github.com/pravallika2108/Ecommerce-Fashion.git
 cd Ecommerce-Fashion
 ```
-2. **Install frontend dependencies**
+2. **Install backend dependencies**
 
 ```bash
 cd server
 npm install
 cd ..
 ```
-3. **Install backend dependencies**
+3. **Install frontend dependencies**
 
 ```bash
 cd  client
