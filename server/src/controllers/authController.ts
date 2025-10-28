@@ -18,7 +18,7 @@ function generateToken(userId: string, email: string, role: string) {
   return { accessToken, refreshToken };
 }
 
-async function setTokens(
+ function setTokens(
   res: Response,
   accessToken: string,
   refreshToken: string
@@ -188,7 +188,7 @@ export const refreshAccessToken = async (
     });
 
     // Set new cookies
-    await setTokens(res, accessToken, newRefreshToken);
+     setTokens(res, accessToken, newRefreshToken);
     
     res.status(200).json({
       success: true,
