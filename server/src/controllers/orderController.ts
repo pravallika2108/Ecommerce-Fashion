@@ -5,9 +5,9 @@ import { v4 as uuidv4 } from "uuid";
 import { prisma } from "../server";
 
 const PAYPAL_CLIENT_ID =
-  "AYYtmQuBVHm_q4fO-nRv84xIKhQk1-BdhSLckYRxcBJLhxI5EcxafPKdkvKpqLDP-pNLNXalxvlUSgZE";
+  "ASwCKWTp8cx62RF37NQaVDWVrJqx0jKezsrWLiLVUh827KrvQ_8P-v1jQLHeKxL-G7AI5jZV598KuUax";
 const PAYPAL_CLIENT_SECRET =
-  "EH6X0HMUA-0gB0Z1m8fq_p-YTy1dDLZT7Zs-Q8VcuX33xJN9RID883YWb38JSMwz88t2grJNwKR5ct_W";
+  "EAAZ2qfJSg97pWWhCytOIDH2ilGUt2LSrBY8aVHcLRWJddisX2tQa00jWqB6Y3Xa1iyaKhVw-DFRbjZ5";
 
 async function getPaypalAccessToken() {
   const response = await axios.post(
