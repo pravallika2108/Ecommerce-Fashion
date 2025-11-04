@@ -58,7 +58,7 @@ async function proxyRequest(method: string, request: NextRequest) {
 
     const data = await response.text();
     const setCookieHeaders = response.headers.getSetCookie();
-    
+    console.log(setCookieHeaders)
     console.log(`[PROXY] Backend response: ${response.status}`);
     
     const proxyResponse = new NextResponse(data, {
