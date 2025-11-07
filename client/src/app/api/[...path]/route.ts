@@ -9,8 +9,9 @@ export async function POST(request: NextRequest) {
 
 async function proxyRequest(method: string, request: NextRequest) {
   try {
+    console.log(request.nextUrl)
     const path = request.nextUrl.pathname.replace('/api/', '');
-    console.log(path)
+
     const searchParams = request.nextUrl.searchParams.toString();
     const backendUrl = `${BACKEND_URL}/api/${path}${searchParams ? `?${searchParams}` : ''}`;
     
