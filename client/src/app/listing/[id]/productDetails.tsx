@@ -8,7 +8,6 @@ import { useEffect, useState } from "react";
 import ProductDetailsSkeleton from "./productSkeleton";
 import { useCartStore } from "@/store/useCartStore";
 import { useToast } from "@/hooks/use-toast";
-import SizeAdvisory from "@/components/ai/SizeAdvisory"; // ✅ ADDED
 
 function ProductDetailsContent({ id }: { id: string }) {
   const [product, setProduct] = useState<any>(null);
@@ -60,6 +59,8 @@ function ProductDetailsContent({ id }: { id: string }) {
   const handleImageError = (imageUrl: string) => {
     setImageErrors((prev) => ({ ...prev, [imageUrl]: true }));
   };
+
+  console.log(id, product);
 
   if (!product || isLoading) return <ProductDetailsSkeleton />;
 
@@ -185,20 +186,14 @@ function ProductDetailsContent({ id }: { id: string }) {
               </div>
             </div>
 
-            {/* Add to Cart Button + AI Size Advisor */}
-            <div className="flex flex-col gap-4">
+            {/* Add to Cart Button */}
+            <div>
               <Button
                 className="w-full bg-black text-white hover:bg-gray-800 py-6 text-lg"
                 onClick={handleAddToCart}
               >
                 ADD TO CART
               </Button>
-
-              {/* ✅ AI Size Advisory Button */}
-              <SizeAdvisory
-                productName={product.name}
-                availableSizes={product.sizes}
-              />
             </div>
           </div>
         </div>
@@ -233,4 +228,5 @@ function ProductDetailsContent({ id }: { id: string }) {
 }
 
 export default ProductDetailsContent;
+
 
