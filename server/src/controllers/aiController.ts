@@ -9,7 +9,7 @@ let visionModel: any = null;
 
 if (hasGeminiKey) {
   genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-  textModel = genAI.getGenerativeModel({model: "gemini-1.5-flash  });
+  textModel = genAI.getGenerativeModel({model: "gemini-1.5-flash" });
   visionModel = genAI.getGenerativeModel({ model: "gemini-1.5-pro-vision" });
 }
 
