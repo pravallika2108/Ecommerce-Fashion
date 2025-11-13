@@ -9,7 +9,7 @@ interface SizeAdvisoryProps {
   availableSizes?: string[];
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://ecommerce-fashion-tj0t.onrender.com';
 
 export default function SizeAdvisory({
   productName = 'this item',
