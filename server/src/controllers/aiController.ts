@@ -8,9 +8,12 @@ let textModel: any = null;
 let visionModel: any = null;
 
 if (hasGeminiKey) {
+  // ✅ Initialize Gemini client (uses v1 endpoint automatically in latest SDK)
   genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-  textModel = genAI.getGenerativeModel({model: "gemini-1.5-flash" });
-  visionModel = genAI.getGenerativeModel({ model: "gemini-1.5-pro-vision" });
+
+  // ✅ Use correct model names for v1 API
+  textModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  visionModel = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
 }
 
 // ---------------------- 1️⃣ CHAT ASSISTANT ----------------------
@@ -23,7 +26,6 @@ export const handleChat = async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
-    // Mock mode for testing
     if (!hasGeminiKey) {
       res.json({
         success: true,
@@ -32,7 +34,10 @@ export const handleChat = async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
-    const result = await textModel.generateContent([{ text: message }]);
+    const result = await textModel.generateContent({
+      contents: [{ role: "user", parts: [{ text: message }] }],
+    });
+
     res.json({ success: true, reply: result.response.text() });
   } catch (err) {
     console.error("AI Chat Error:", err);
@@ -59,17 +64,17 @@ export const handleVisualSearch = async (req: Request, res: Response): Promise<v
       return;
     }
 
-    const result = await visionModel.generateContent([
-      {
-        text: `Analyze this clothing image and describe type, color, and style.`,
-      },
-      {
-        inlineData: {
-          mimeType: "image/jpeg",
-          data: imageBase64,
+    const result = await visionModel.generateContent({
+      contents: [
+        {
+          role: "user",
+          parts: [
+            { text: "Analyze this clothing image and describe type, color, and style." },
+            { inlineData: { mimeType: "image/jpeg", data: imageBase64 } },
+          ],
         },
-      },
-    ]);
+      ],
+    });
 
     res.json({ success: true, analysis: result.response.text() });
   } catch (err) {
@@ -109,7 +114,10 @@ export const handleSizeAdvisory = async (req: Request, res: Response): Promise<v
       return;
     }
 
-    const result = await textModel.generateContent([{ text: prompt }]);
+    const result = await textModel.generateContent({
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+    });
+
     res.json({ success: true, recommendation: result.response.text() });
   } catch (err) {
     console.error("AI Size Advisory Error:", err);
