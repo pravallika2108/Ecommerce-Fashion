@@ -10,7 +10,7 @@ import settingsRoutes from "./routes/settingRoutes";
 import cartRoutes from "./routes/cartRoutes";
 import addressRoutes from "./routes/addressRoutes";
 import orderRoutes from "./routes/orderRoutes";
-
+import aiRoutes from "./routes/aiRoutes";
 dotenv.config();
 const PORT = process.env.PORT || 3001;
 const app = express();
