@@ -2,6 +2,9 @@ import { Request, Response } from "express";
 import OpenAI from "openai";
 import { v2 as cloudinary } from "cloudinary";
 
+
+
+
 // --- Cloudinary Config ---
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -11,7 +14,7 @@ cloudinary.config({
 
 // --- OpenAI Setup ---
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: process.env.OPENAI_API_KEY!,
 });
 
 // ===========================================================
@@ -27,13 +30,13 @@ export const handleChat = async (req: Request, res: Response): Promise<void> => 
     }
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini", // lightweight & free-tier friendly
+      model: "gpt-4o-mini", // lightweight & efficient for text
       messages: [
         ...conversationHistory,
         {
           role: "system",
-          content: `You are an AI Fashion Stylist Assistant.
-          Provide short, stylish, and trend-aware advice for users browsing ShopVibe.`,
+          content: `You are an AI Fashion Stylist Assistant for ShopVibe.
+          Give short, trendy, and confident responses about outfit styling, color matching, and fashion tips.`,
         },
         { role: "user", content: message },
       ],
@@ -59,7 +62,7 @@ export const handleVisualSearch = async (req: Request, res: Response): Promise<v
       return;
     }
 
-    // Upload to Cloudinary
+    // Upload to Cloudinary first
     const uploadResponse = await cloudinary.uploader.upload(
       `data:image/jpeg;base64,${imageBase64}`,
       { folder: "visual-search" }
@@ -67,17 +70,23 @@ export const handleVisualSearch = async (req: Request, res: Response): Promise<v
 
     const imageUrl = uploadResponse.secure_url;
 
-    // Send to OpenAI GPT-4o (Vision model)
+    // Use OpenAI Vision Model
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4o", // Supports vision + text
       messages: [
         {
           role: "user",
           content: [
-            { type: "text", text: "Analyze this fashion item and describe:" },
+            {
+              type: "text",
+              text: `Analyze this clothing item and describe:
+              1. Type and color of outfit
+              2. Style (e.g., casual, formal, streetwear)
+              3. Suggested matching items or accessories.`,
+            },
             {
               type: "image_url",
-              image_url: imageUrl,
+              image_url: { url: imageUrl }, // ✅ fixed structure (was causing your TS2769 error)
             },
           ],
         },
@@ -112,10 +121,11 @@ export const handleSizeAdvisory = async (req: Request, res: Response): Promise<v
     - Weight: ${measurements.weight} kg
     - Chest: ${measurements.chest} cm
     - Waist: ${measurements.waist} cm
+
     Respond with:
     1. Recommended size
     2. Brief reasoning
-    3. Any fit or comfort notes
+    3. Fit and comfort notes
     `;
 
     const response = await openai.chat.completions.create({
@@ -130,4 +140,3 @@ export const handleSizeAdvisory = async (req: Request, res: Response): Promise<v
     res.status(500).json({ error: "Failed to generate recommendation", details: error.message });
   }
 };
-
