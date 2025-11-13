@@ -1,57 +1,114 @@
 import { Request, Response } from "express";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// Initialize Gemini client
+// ===========================================================
+// 🔧 Initialize Gemini Client
+// ===========================================================
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-// ---------- 1️⃣ Text Chat ----------
-export const aiChat = async (req: Request, res: Response): Promise<void> => {
+// Use lightweight and fast model
+const textModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+const visionModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+// ===========================================================
+// 💬 1️⃣ AI Chat Assistant
+// ===========================================================
+export const handleChat = async (req: Request, res: Response): Promise<void> => {
   try {
     const { message } = req.body;
-    const result = await model.generateContent(message);
+
+    if (!message) {
+      res.status(400).json({ error: "Message is required" });
+      return;
+    }
+
+    const result = await textModel.generateContent(
+      `You are an AI Fashion Assistant for the ShopVibe app. 
+      Respond with short, helpful, trendy fashion advice.\n\nUser: ${message}`
+    );
+
     const text = result.response.text();
     res.json({ success: true, reply: text });
-  } catch (err) {
-    console.error("AI Chat Error:", err);
+  } catch (error) {
+    console.error("AI Chat Error:", error);
     res.status(500).json({ success: false, message: "AI chat failed" });
   }
 };
 
-// ---------- 2️⃣ Visual Search ----------
-export const aiVisualSearch = async (req: Request, res: Response): Promise<void> => {
+// ===========================================================
+// 🖼️ 2️⃣ Visual Search (Image Analysis)
+// ===========================================================
+export const handleVisualSearch = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { description, imageUrl } = req.body;
+    const { imageBase64 } = req.body;
 
-    const result = await model.generateContent([
-      { text: `Analyze the image and ${description}` },
-      { image_url: imageUrl },
+    if (!imageBase64) {
+      res.status(400).json({ error: "Image is required" });
+      return;
+    }
+
+    const result = await visionModel.generateContent([
+      {
+        role: "user",
+        parts: [
+          {
+            text: `Analyze this clothing item image and describe:
+            - Type of clothing
+            - Color and material
+            - Style (casual, formal, etc.)
+            - Suggested matching items`,
+          },
+          {
+            inlineData: {
+              mimeType: "image/jpeg",
+              data: imageBase64,
+            },
+          },
+        ],
+      },
     ]);
 
-    res.json({ success: true, reply: result.response.text() });
-  } catch (err) {
-    console.error("AI Visual Search Error:", err);
+    const text = result.response.text();
+    res.json({ success: true, analysis: text });
+  } catch (error) {
+    console.error("AI Visual Search Error:", error);
     res.status(500).json({ success: false, message: "Visual search failed" });
   }
 };
 
-// ---------- 3️⃣ Size / Style Advisory ----------
-export const aiSizeAdvisory = async (req: Request, res: Response): Promise<void> => {
+// ===========================================================
+// 📏 3️⃣ Size & Style Advisory
+// ===========================================================
+export const handleSizeAdvisory = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { bodyType, height, weight, fitPreference } = req.body;
+    const { productName, availableSizes, measurements } = req.body;
+
+    if (!productName || !availableSizes || !measurements) {
+      res.status(400).json({ error: "Missing fields for size advisory." });
+      return;
+    }
 
     const prompt = `
-      Recommend clothing sizes and fits for:
-      Height: ${height} cm
-      Weight: ${weight} kg
-      Body Type: ${bodyType}
-      Fit Preference: ${fitPreference}
+      You are a professional fashion size advisor.
+      Product: ${productName}
+      Available sizes: ${availableSizes.join(", ")}
+      Customer measurements:
+      - Height: ${measurements.height} cm
+      - Weight: ${measurements.weight} kg
+      - Chest: ${measurements.chest} cm
+      - Waist: ${measurements.waist} cm
+      Suggest:
+      1️⃣ Recommended size
+      2️⃣ Reason for your suggestion
+      3️⃣ Fit or comfort notes
     `;
 
-    const result = await model.generateContent(prompt);
-    res.json({ success: true, advice: result.response.text() });
-  } catch (err) {
-    console.error("AI Size Advisory Error:", err);
+    const result = await textModel.generateContent(prompt);
+    const advice = result.response.text();
+
+    res.json({ success: true, recommendation: advice });
+  } catch (error) {
+    console.error("AI Size Advisory Error:", error);
     res.status(500).json({ success: false, message: "Size advisory failed" });
   }
 };
