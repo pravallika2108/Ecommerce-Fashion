@@ -1,212 +1,149 @@
 'use client';
 
 import { useState } from 'react';
-import { Ruler, X } from 'lucide-react';
+import { Camera, Upload, X, Search } from 'lucide-react';
 import axios from 'axios';
 
-interface SizeAdvisoryProps {
-  productName?: string;
-  availableSizes?: string[];
-}
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://ecommerce-fashion-tj0t.onrender.com';
-
-export default function SizeAdvisory({
-  productName = 'this item',
-  availableSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
-}: SizeAdvisoryProps) {
+export default function VisualSearch() {
   const [isOpen, setIsOpen] = useState(false);
-  const [measurements, setMeasurements] = useState({
-    height: '',
-    weight: '',
-    chest: '',
-    waist: '',
-  });
-  const [recommendation, setRecommendation] = useState('');
+  const [image, setImage] = useState<string | null>(null);
+  const [results, setResults] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const getRecommendation = async () => {
-    if (!measurements.height || !measurements.weight || !measurements.chest || !measurements.waist) {
-      alert('Please fill in all measurements');
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const searchSimilarItems = async () => {
+    if (!image) {
+      alert('Please upload an image first');
       return;
     }
 
     setIsLoading(true);
-    setRecommendation('');
+    setResults('');
 
     try {
-      const response = await axios.post(`${API_URL}/api/ai/size-recommendation`, {
-        productName,
-        measurements,
-        availableSizes,
+      // Remove data URL prefix to get base64 string
+      const base64Image = image.split(',')[1];
+
+      const response = await axios.post(`${API_URL}/api/ai/visual-search`, {
+        imageBase64: base64Image,
       });
 
-      setRecommendation(response.data.recommendation);
+      setResults(response.data.analysis);
     } catch (error) {
       console.error('Error:', error);
-      setRecommendation('Unable to get recommendation. Please try again.');
+      setResults('Unable to analyze image. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const resetForm = () => {
-    setMeasurements({
-      height: '',
-      weight: '',
-      chest: '',
-      waist: '',
-    });
-    setRecommendation('');
-  };
-
-  const handleClose = () => {
-    setIsOpen(false);
-    resetForm();
+  const resetSearch = () => {
+    setImage(null);
+    setResults('');
   };
 
   return (
     <>
-      {/* Trigger Button */}
       <button
         onClick={() => setIsOpen(true)}
-        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
       >
-        <Ruler className="w-4 h-4" />
-        Find My Size
+        <Camera className="w-4 h-4" />
+        Visual Search
       </button>
 
-      {/* Modal */}
       {isOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
-            {/* Header */}
-            <div className="sticky top-0 bg-blue-600 text-white p-4 rounded-t-lg flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <Ruler className="w-5 h-5" />
-                <h3 className="text-lg font-bold">Smart Size Advisory</h3>
-              </div>
-              <button onClick={handleClose} className="hover:bg-blue-700 rounded p-1 transition-colors">
+          <div className="bg-white rounded-lg max-w-2xl w-full p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold">AI Visual Search</h3>
+              <button
+                onClick={() => {
+                  setIsOpen(false);
+                  resetSearch();
+                }}
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Content */}
-            <div className="p-6">
-              <p className="text-sm text-gray-600 mb-4">
-                Enter your measurements to get a personalized size recommendation for{' '}
-                <strong>{productName}</strong>
-              </p>
+            <p className="text-sm text-gray-600 mb-4">
+              Upload a photo of clothing to find similar items and get style suggestions
+            </p>
 
-              {/* Measurement Inputs */}
-              <div className="space-y-4 mb-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Height (cm)
-                  </label>
+            <div className="mb-4">
+              {!image ? (
+                <label className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                    <Upload className="w-12 h-12 text-gray-400 mb-3" />
+                    <p className="mb-2 text-sm text-gray-500">
+                      <span className="font-semibold">Click to upload</span> or drag and
+                      drop
+                    </p>
+                    <p className="text-xs text-gray-500">PNG, JPG, or JPEG</p>
+                  </div>
                   <input
-                    type="number"
-                    value={measurements.height}
-                    onChange={(e) =>
-                      setMeasurements({ ...measurements, height: e.target.value })
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="e.g., 170"
+                    type="file"
+                    className="hidden"
+                    accept="image/*"
+                    onChange={handleImageUpload}
                   />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Weight (kg)
-                  </label>
-                  <input
-                    type="number"
-                    value={measurements.weight}
-                    onChange={(e) =>
-                      setMeasurements({ ...measurements, weight: e.target.value })
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="e.g., 65"
+                </label>
+              ) : (
+                <div className="relative">
+                  <img
+                    src={image}
+                    alt="Uploaded"
+                    className="w-full h-64 object-contain rounded-lg bg-gray-50"
                   />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Chest (cm)
-                  </label>
-                  <input
-                    type="number"
-                    value={measurements.chest}
-                    onChange={(e) =>
-                      setMeasurements({ ...measurements, chest: e.target.value })
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="e.g., 90"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Waist (cm)
-                  </label>
-                  <input
-                    type="number"
-                    value={measurements.waist}
-                    onChange={(e) =>
-                      setMeasurements({ ...measurements, waist: e.target.value })
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="e.g., 75"
-                  />
-                </div>
-              </div>
-
-              {/* Available Sizes */}
-              <div className="mb-4">
-                <p className="text-sm font-medium text-gray-700 mb-2">
-                  Available Sizes:
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {availableSizes.map((size) => (
-                    <span
-                      key={size}
-                      className="px-3 py-1 bg-blue-50 border border-blue-200 text-blue-700 rounded-full text-sm font-medium"
-                    >
-                      {size}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              {/* Get Recommendation Button */}
-              <button
-                onClick={getRecommendation}
-                disabled={isLoading}
-                className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium transition-colors mb-4"
-              >
-                {isLoading ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-                    Analyzing...
-                  </span>
-                ) : (
-                  'Get Size Recommendation'
-                )}
-              </button>
-
-              {/* Recommendation Result */}
-              {recommendation && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <h4 className="font-bold text-green-800 mb-2 flex items-center gap-2">
-                    <Ruler className="w-4 h-4" />
-                    Recommendation:
-                  </h4>
-                  <p className="text-sm text-green-700 whitespace-pre-wrap">
-                    {recommendation}
-                  </p>
+                  <button
+                    onClick={resetSearch}
+                    className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
               )}
             </div>
+
+            {image && (
+              <button
+                onClick={searchSimilarItems}
+                disabled={isLoading}
+                className="w-full bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700 disabled:opacity-50 mb-4 flex items-center justify-center gap-2"
+              >
+                {isLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                    Analyzing...
+                  </>
+                ) : (
+                  <>
+                    <Search className="w-4 h-4" />
+                    Find Similar Items
+                  </>
+                )}
+              </button>
+            )}
+
+            {results && (
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 max-h-64 overflow-y-auto">
+                <h4 className="font-bold text-purple-800 mb-2">Analysis Results:</h4>
+                <p className="text-sm text-purple-700 whitespace-pre-wrap">{results}</p>
+              </div>
+            )}
           </div>
         </div>
       )}
