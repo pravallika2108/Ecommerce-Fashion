@@ -1,18 +1,19 @@
 import { Request, Response } from "express";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// ===========================================================
-// 🔧 Initialize Gemini Client
-// ===========================================================
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+const hasGeminiKey = !!process.env.GEMINI_API_KEY;
 
-// Use lightweight and fast model
-const textModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-const visionModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+let genAI: GoogleGenerativeAI | null = null;
+let textModel: any = null;
+let visionModel: any = null;
 
-// ===========================================================
-// 💬 1️⃣ AI Chat Assistant
-// ===========================================================
+if (hasGeminiKey) {
+  genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+  textModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  visionModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+}
+
+// ---------------------- 1️⃣ CHAT ASSISTANT ----------------------
 export const handleChat = async (req: Request, res: Response): Promise<void> => {
   try {
     const { message } = req.body;
@@ -22,22 +23,24 @@ export const handleChat = async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
-    const result = await textModel.generateContent(
-      `You are an AI Fashion Assistant for the ShopVibe app. 
-      Respond with short, helpful, trendy fashion advice.\n\nUser: ${message}`
-    );
+    // Mock mode for testing
+    if (!hasGeminiKey) {
+      res.json({
+        success: true,
+        reply: `👋 Mock AI Reply: Based on your message "${message}", here’s a smart fashion suggestion!`,
+      });
+      return;
+    }
 
-    const text = result.response.text();
-    res.json({ success: true, reply: text });
-  } catch (error) {
-    console.error("AI Chat Error:", error);
+    const result = await textModel.generateContent([{ text: message }]);
+    res.json({ success: true, reply: result.response.text() });
+  } catch (err) {
+    console.error("AI Chat Error:", err);
     res.status(500).json({ success: false, message: "AI chat failed" });
   }
 };
 
-// ===========================================================
-// 🖼️ 2️⃣ Visual Search (Image Analysis)
-// ===========================================================
+// ---------------------- 2️⃣ VISUAL SEARCH ----------------------
 export const handleVisualSearch = async (req: Request, res: Response): Promise<void> => {
   try {
     const { imageBase64 } = req.body;
@@ -47,38 +50,35 @@ export const handleVisualSearch = async (req: Request, res: Response): Promise<v
       return;
     }
 
+    if (!hasGeminiKey) {
+      res.json({
+        success: true,
+        analysis:
+          "🧠 Mock AI Visual Analysis: Detected a trendy outfit with modern style and neutral tones.",
+      });
+      return;
+    }
+
     const result = await visionModel.generateContent([
       {
-        role: "user",
-        parts: [
-          {
-            text: `Analyze this clothing item image and describe:
-            - Type of clothing
-            - Color and material
-            - Style (casual, formal, etc.)
-            - Suggested matching items`,
-          },
-          {
-            inlineData: {
-              mimeType: "image/jpeg",
-              data: imageBase64,
-            },
-          },
-        ],
+        text: `Analyze this clothing image and describe type, color, and style.`,
+      },
+      {
+        inlineData: {
+          mimeType: "image/jpeg",
+          data: imageBase64,
+        },
       },
     ]);
 
-    const text = result.response.text();
-    res.json({ success: true, analysis: text });
-  } catch (error) {
-    console.error("AI Visual Search Error:", error);
+    res.json({ success: true, analysis: result.response.text() });
+  } catch (err) {
+    console.error("AI Visual Search Error:", err);
     res.status(500).json({ success: false, message: "Visual search failed" });
   }
 };
 
-// ===========================================================
-// 📏 3️⃣ Size & Style Advisory
-// ===========================================================
+// ---------------------- 3️⃣ SIZE ADVISORY ----------------------
 export const handleSizeAdvisory = async (req: Request, res: Response): Promise<void> => {
   try {
     const { productName, availableSizes, measurements } = req.body;
@@ -89,26 +89,30 @@ export const handleSizeAdvisory = async (req: Request, res: Response): Promise<v
     }
 
     const prompt = `
-      You are a professional fashion size advisor.
+      You are a fashion size advisor.
       Product: ${productName}
       Available sizes: ${availableSizes.join(", ")}
-      Customer measurements:
+      Customer:
       - Height: ${measurements.height} cm
       - Weight: ${measurements.weight} kg
       - Chest: ${measurements.chest} cm
       - Waist: ${measurements.waist} cm
-      Suggest:
-      1️⃣ Recommended size
-      2️⃣ Reason for your suggestion
-      3️⃣ Fit or comfort notes
+      Suggest best size and reasoning.
     `;
 
-    const result = await textModel.generateContent(prompt);
-    const advice = result.response.text();
+    if (!hasGeminiKey) {
+      res.json({
+        success: true,
+        recommendation:
+          "👕 Mock Suggestion: Based on height and weight, we recommend Medium (M) for a relaxed fit.",
+      });
+      return;
+    }
 
-    res.json({ success: true, recommendation: advice });
-  } catch (error) {
-    console.error("AI Size Advisory Error:", error);
+    const result = await textModel.generateContent([{ text: prompt }]);
+    res.json({ success: true, recommendation: result.response.text() });
+  } catch (err) {
+    console.error("AI Size Advisory Error:", err);
     res.status(500).json({ success: false, message: "Size advisory failed" });
   }
 };
