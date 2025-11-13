@@ -23,6 +23,7 @@ import { brands, categories, sizes } from "@/utils/config";
 import { ChevronLeft, ChevronRight, SlidersHorizontal } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import VisualSearch from "@/components/ai/VisualSearch"; // ✅ ADD THIS LINE
 
 const colors = [
   { name: "Navy", class: "bg-[#0F172A]" },
@@ -213,6 +214,11 @@ function ProductListingPage() {
 
   return (
     <div className="min-h-screen bg-white">
+      {/* ✅ ADD VISUAL SEARCH - Floating button in top-right */}
+      <div className="fixed top-24 right-4 z-40">
+        <VisualSearch />
+      </div>
+
       {/* Banner Section */}
       <div className="relative h-[300px] overflow-hidden bg-gray-200">
         <img
