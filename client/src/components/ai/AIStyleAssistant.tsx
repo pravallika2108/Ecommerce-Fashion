@@ -27,13 +27,14 @@ export default function AIStyleAssistant() {
 
     try {
       const response = await axios.post(`${API_URL}/api/ai/chat`, {
-        messages: [...messages, userMessage],
-      });
+  message: userMessage.content,
+  conversationHistory: messages,
+});
 
       const assistantMessage: Message = {
-        role: 'assistant',
-        content: response.data.message,
-      };
+  role: 'assistant',
+  content: response.data.response,
+};
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {
       console.error('Error:', error);
