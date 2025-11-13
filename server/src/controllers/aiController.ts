@@ -1,29 +1,23 @@
 import { Request, Response } from "express";
-import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
+import { v2 as cloudinary } from "cloudinary";
 
-console.log("=================================");
-console.log("🔍 Environment Check:");
-console.log("API Key exists:", !!process.env.ANTHROPIC_API_KEY);
-console.log("API Key preview:", process.env.ANTHROPIC_API_KEY ? 
-  `${process.env.ANTHROPIC_API_KEY.substring(0, 15)}...` : "NOT FOUND");
-console.log("=================================");
-
-// Initialize Anthropic client
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
+// --- Cloudinary Config ---
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// Helper function to extract text from content blocks
-const extractTextFromContent = (content: Anthropic.ContentBlock[]): string => {
-  const textBlock = content.find((block) => block.type === "text");
-  return textBlock && "text" in textBlock ? textBlock.text : "";
-};
+// --- OpenAI Setup ---
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
-// AI Style Assistant - Chat endpoint
-export const handleChat = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
+// ===========================================================
+// 🧵 1️⃣ AI Style Assistant Chat
+// ===========================================================
+export const handleChat = async (req: Request, res: Response): Promise<void> => {
   try {
     const { message, conversationHistory = [] } = req.body;
 
@@ -32,99 +26,31 @@ export const handleChat = async (
       return;
     }
 
-    // Build conversation messages
-    const messages = [
-      ...conversationHistory,
-      {
-        role: "user" as const,
-        content: `You are a fashion stylist assistant for ShopVibe, an online clothing store. 
-        Help customers with style advice, outfit suggestions, and fashion questions.
-        Be friendly, helpful, and knowledgeable about current fashion trends.
-        Keep responses concise and practical.
-        
-        Customer question: ${message}`,
-      },
-    ];
-
-    const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 1024,
-      messages: messages,
-    });
-
-    const responseText = extractTextFromContent(response.content);
-
-    res.json({
-      response: responseText,
-      conversationHistory: [
-        ...messages,
-        { role: "assistant", content: responseText },
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini", // lightweight & free-tier friendly
+      messages: [
+        ...conversationHistory,
+        {
+          role: "system",
+          content: `You are an AI Fashion Stylist Assistant.
+          Provide short, stylish, and trend-aware advice for users browsing ShopVibe.`,
+        },
+        { role: "user", content: message },
       ],
     });
+
+    const reply = response.choices[0].message?.content ?? "No response generated.";
+    res.json({ response: reply });
   } catch (error: any) {
     console.error("AI Chat Error:", error);
-    res.status(500).json({
-      error: "Failed to get AI response",
-      details: error.message,
-    });
+    res.status(500).json({ error: "Failed to get AI response", details: error.message });
   }
 };
 
-// Smart Size Advisory endpoint
-export const handleSizeAdvisory = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
-  try {
-    const { productName, availableSizes, measurements } = req.body;
-
-    if (!productName || !measurements) {
-      res.status(400).json({
-        error: "Product name and measurements are required",
-      });
-      return;
-    }
-
-    const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 512,
-      messages: [
-        {
-          role: "user",
-          content: `As a fashion sizing expert, recommend the best size for ${productName}.
-          
-Available sizes: ${availableSizes.join(", ")}
-
-Customer measurements:
-- Height: ${measurements.height} cm
-- Weight: ${measurements.weight} kg
-- Chest: ${measurements.chest} cm
-- Waist: ${measurements.waist} cm
-
-Provide a concise size recommendation with reasoning. Be specific about which size to choose.`,
-        },
-      ],
-    });
-
-    const recommendationText = extractTextFromContent(response.content);
-
-    res.json({
-      recommendation: recommendationText,
-    });
-  } catch (error: any) {
-    console.error("Size Advisory Error:", error);
-    res.status(500).json({
-      error: "Failed to get size recommendation",
-      details: error.message,
-    });
-  }
-};
-
-// Visual Search endpoint
-export const handleVisualSearch = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
+// ===========================================================
+// 🖼️ 2️⃣ Visual Search (Image Analysis)
+// ===========================================================
+export const handleVisualSearch = async (req: Request, res: Response): Promise<void> => {
   try {
     const { imageBase64 } = req.body;
 
@@ -133,51 +59,75 @@ export const handleVisualSearch = async (
       return;
     }
 
-    // Remove data URL prefix if present
-    const base64Data = imageBase64.includes("base64,")
-      ? imageBase64.split("base64,")[1]
-      : imageBase64;
+    // Upload to Cloudinary
+    const uploadResponse = await cloudinary.uploader.upload(
+      `data:image/jpeg;base64,${imageBase64}`,
+      { folder: "visual-search" }
+    );
 
-    const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 1024,
+    const imageUrl = uploadResponse.secure_url;
+
+    // Send to OpenAI GPT-4o (Vision model)
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
       messages: [
         {
           role: "user",
           content: [
+            { type: "text", text: "Analyze this fashion item and describe:" },
             {
-              type: "image",
-              source: {
-                type: "base64",
-                media_type: "image/jpeg",
-                data: base64Data,
-              },
-            },
-            {
-              type: "text",
-              text: `Analyze this clothing item and describe:
-1) Type of garment (e.g., dress, shirt, pants)
-2) Color and pattern details
-3) Style and suitable occasions
-4) Key features and design elements
-
-Then suggest specific keywords to search for similar items in our fashion store.`,
+              type: "image_url",
+              image_url: imageUrl,
             },
           ],
         },
       ],
     });
 
-    const analysisText = extractTextFromContent(response.content);
-
-    res.json({
-      analysis: analysisText,
-    });
+    const analysis = response.choices[0].message?.content ?? "Unable to analyze image.";
+    res.json({ analysis });
   } catch (error: any) {
     console.error("Visual Search Error:", error);
-    res.status(500).json({
-      error: "Failed to analyze image",
-      details: error.message,
-    });
+    res.status(500).json({ error: "Failed to analyze image", details: error.message });
   }
 };
+
+// ===========================================================
+// 📏 3️⃣ Size Advisory (Personalized Size Recommendation)
+// ===========================================================
+export const handleSizeAdvisory = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { productName, availableSizes, measurements } = req.body;
+
+    if (!productName || !availableSizes || !measurements) {
+      res.status(400).json({ error: "Missing fields for size advisory." });
+      return;
+    }
+
+    const prompt = `
+    As a professional fashion size advisor, recommend the best size for ${productName}.
+    Available sizes: ${availableSizes.join(", ")}.
+    Customer measurements:
+    - Height: ${measurements.height} cm
+    - Weight: ${measurements.weight} kg
+    - Chest: ${measurements.chest} cm
+    - Waist: ${measurements.waist} cm
+    Respond with:
+    1. Recommended size
+    2. Brief reasoning
+    3. Any fit or comfort notes
+    `;
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }],
+    });
+
+    const recommendation = response.choices[0].message?.content ?? "No recommendation available.";
+    res.json({ recommendation });
+  } catch (error: any) {
+    console.error("Size Advisory Error:", error);
+    res.status(500).json({ error: "Failed to generate recommendation", details: error.message });
+  }
+};
+
