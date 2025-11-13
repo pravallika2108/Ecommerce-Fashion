@@ -1,142 +1,57 @@
 import { Request, Response } from "express";
-import OpenAI from "openai";
-import { v2 as cloudinary } from "cloudinary";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
+// Initialize Gemini client
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-
-
-// --- Cloudinary Config ---
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
-
-// --- OpenAI Setup ---
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!,
-});
-
-// ===========================================================
-// 🧵 1️⃣ AI Style Assistant Chat
-// ===========================================================
-export const handleChat = async (req: Request, res: Response): Promise<void> => {
+// ---------- 1️⃣ Text Chat ----------
+export const aiChat = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { message, conversationHistory = [] } = req.body;
-
-    if (!message) {
-      res.status(400).json({ error: "Message is required" });
-      return;
-    }
-
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini", // lightweight & efficient for text
-      messages: [
-        ...conversationHistory,
-        {
-          role: "system",
-          content: `You are an AI Fashion Stylist Assistant for ShopVibe.
-          Give short, trendy, and confident responses about outfit styling, color matching, and fashion tips.`,
-        },
-        { role: "user", content: message },
-      ],
-    });
-
-    const reply = response.choices[0].message?.content ?? "No response generated.";
-    res.json({ response: reply });
-  } catch (error: any) {
-    console.error("AI Chat Error:", error);
-    res.status(500).json({ error: "Failed to get AI response", details: error.message });
+    const { message } = req.body;
+    const result = await model.generateContent(message);
+    const text = result.response.text();
+    res.json({ success: true, reply: text });
+  } catch (err) {
+    console.error("AI Chat Error:", err);
+    res.status(500).json({ success: false, message: "AI chat failed" });
   }
 };
 
-// ===========================================================
-// 🖼️ 2️⃣ Visual Search (Image Analysis)
-// ===========================================================
-export const handleVisualSearch = async (req: Request, res: Response): Promise<void> => {
+// ---------- 2️⃣ Visual Search ----------
+export const aiVisualSearch = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { imageBase64 } = req.body;
+    const { description, imageUrl } = req.body;
 
-    if (!imageBase64) {
-      res.status(400).json({ error: "Image is required" });
-      return;
-    }
+    const result = await model.generateContent([
+      { text: `Analyze the image and ${description}` },
+      { image_url: imageUrl },
+    ]);
 
-    // Upload to Cloudinary first
-    const uploadResponse = await cloudinary.uploader.upload(
-      `data:image/jpeg;base64,${imageBase64}`,
-      { folder: "visual-search" }
-    );
-
-    const imageUrl = uploadResponse.secure_url;
-
-    // Use OpenAI Vision Model
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o", // Supports vision + text
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: `Analyze this clothing item and describe:
-              1. Type and color of outfit
-              2. Style (e.g., casual, formal, streetwear)
-              3. Suggested matching items or accessories.`,
-            },
-            {
-              type: "image_url",
-              image_url: { url: imageUrl }, // ✅ fixed structure (was causing your TS2769 error)
-            },
-          ],
-        },
-      ],
-    });
-
-    const analysis = response.choices[0].message?.content ?? "Unable to analyze image.";
-    res.json({ analysis });
-  } catch (error: any) {
-    console.error("Visual Search Error:", error);
-    res.status(500).json({ error: "Failed to analyze image", details: error.message });
+    res.json({ success: true, reply: result.response.text() });
+  } catch (err) {
+    console.error("AI Visual Search Error:", err);
+    res.status(500).json({ success: false, message: "Visual search failed" });
   }
 };
 
-// ===========================================================
-// 📏 3️⃣ Size Advisory (Personalized Size Recommendation)
-// ===========================================================
-export const handleSizeAdvisory = async (req: Request, res: Response): Promise<void> => {
+// ---------- 3️⃣ Size / Style Advisory ----------
+export const aiSizeAdvisory = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { productName, availableSizes, measurements } = req.body;
-
-    if (!productName || !availableSizes || !measurements) {
-      res.status(400).json({ error: "Missing fields for size advisory." });
-      return;
-    }
+    const { bodyType, height, weight, fitPreference } = req.body;
 
     const prompt = `
-    As a professional fashion size advisor, recommend the best size for ${productName}.
-    Available sizes: ${availableSizes.join(", ")}.
-    Customer measurements:
-    - Height: ${measurements.height} cm
-    - Weight: ${measurements.weight} kg
-    - Chest: ${measurements.chest} cm
-    - Waist: ${measurements.waist} cm
-
-    Respond with:
-    1. Recommended size
-    2. Brief reasoning
-    3. Fit and comfort notes
+      Recommend clothing sizes and fits for:
+      Height: ${height} cm
+      Weight: ${weight} kg
+      Body Type: ${bodyType}
+      Fit Preference: ${fitPreference}
     `;
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{ role: "user", content: prompt }],
-    });
-
-    const recommendation = response.choices[0].message?.content ?? "No recommendation available.";
-    res.json({ recommendation });
-  } catch (error: any) {
-    console.error("Size Advisory Error:", error);
-    res.status(500).json({ error: "Failed to generate recommendation", details: error.message });
+    const result = await model.generateContent(prompt);
+    res.json({ success: true, advice: result.response.text() });
+  } catch (err) {
+    console.error("AI Size Advisory Error:", err);
+    res.status(500).json({ success: false, message: "Size advisory failed" });
   }
 };
