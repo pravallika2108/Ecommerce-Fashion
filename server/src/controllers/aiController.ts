@@ -6,13 +6,23 @@ const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
+// Helper function to extract text from content blocks
+const extractTextFromContent = (content: Anthropic.ContentBlock[]): string => {
+  const textBlock = content.find((block) => block.type === "text");
+  return textBlock && "text" in textBlock ? textBlock.text : "";
+};
+
 // AI Style Assistant - Chat endpoint
-export const handleChat = async (req: Request, res: Response) => {
+export const handleChat = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { message, conversationHistory = [] } = req.body;
 
     if (!message) {
-      return res.status(400).json({ error: "Message is required" });
+      res.status(400).json({ error: "Message is required" });
+      return;
     }
 
     // Build conversation messages
@@ -35,11 +45,13 @@ export const handleChat = async (req: Request, res: Response) => {
       messages: messages,
     });
 
+    const responseText = extractTextFromContent(response.content);
+
     res.json({
-      response: response.content[0].text,
+      response: responseText,
       conversationHistory: [
         ...messages,
-        { role: "assistant", content: response.content[0].text },
+        { role: "assistant", content: responseText },
       ],
     });
   } catch (error: any) {
@@ -52,14 +64,18 @@ export const handleChat = async (req: Request, res: Response) => {
 };
 
 // Smart Size Advisory endpoint
-export const handleSizeAdvisory = async (req: Request, res: Response) => {
+export const handleSizeAdvisory = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { productName, availableSizes, measurements } = req.body;
 
     if (!productName || !measurements) {
-      return res.status(400).json({
+      res.status(400).json({
         error: "Product name and measurements are required",
       });
+      return;
     }
 
     const response = await anthropic.messages.create({
@@ -83,8 +99,10 @@ Provide a concise size recommendation with reasoning. Be specific about which si
       ],
     });
 
+    const recommendationText = extractTextFromContent(response.content);
+
     res.json({
-      recommendation: response.content[0].text,
+      recommendation: recommendationText,
     });
   } catch (error: any) {
     console.error("Size Advisory Error:", error);
@@ -96,12 +114,16 @@ Provide a concise size recommendation with reasoning. Be specific about which si
 };
 
 // Visual Search endpoint
-export const handleVisualSearch = async (req: Request, res: Response) => {
+export const handleVisualSearch = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { imageBase64 } = req.body;
 
     if (!imageBase64) {
-      return res.status(400).json({ error: "Image is required" });
+      res.status(400).json({ error: "Image is required" });
+      return;
     }
 
     // Remove data URL prefix if present
@@ -139,8 +161,10 @@ Then suggest specific keywords to search for similar items in our fashion store.
       ],
     });
 
+    const analysisText = extractTextFromContent(response.content);
+
     res.json({
-      analysis: response.content[0].text,
+      analysis: analysisText,
     });
   } catch (error: any) {
     console.error("Visual Search Error:", error);
