@@ -1,6 +1,13 @@
 import { Request, Response } from "express";
 import Anthropic from "@anthropic-ai/sdk";
 
+console.log("=================================");
+console.log("🔍 Environment Check:");
+console.log("API Key exists:", !!process.env.ANTHROPIC_API_KEY);
+console.log("API Key preview:", process.env.ANTHROPIC_API_KEY ? 
+  `${process.env.ANTHROPIC_API_KEY.substring(0, 15)}...` : "NOT FOUND");
+console.log("=================================");
+
 // Initialize Anthropic client
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
