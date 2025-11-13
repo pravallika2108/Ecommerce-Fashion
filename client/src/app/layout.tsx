@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import CommonLayout from "@/components/common/layout";
+import AIStyleAssistant from "@/components/ai/AIStyleAssistant"; // ✅ ADD THIS LINE
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,6 +33,7 @@ export default function RootLayout({
       >
         <CommonLayout>{children}</CommonLayout>
         <Toaster />
+        <AIStyleAssistant /> {/* ✅ ADD THIS LINE - Floating chat button appears on all pages */}
       </body>
     </html>
   );
