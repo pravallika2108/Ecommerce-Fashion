@@ -8,7 +8,7 @@ import {
 const router = express.Router();
 
 router.post("/chat", handleChat);
-router.post("/size-advisory", handleSizeAdvisory);
+router.post("/size-recommendation", handleSizeAdvisory);
 router.post("/visual-search", handleVisualSearch);
 
 export default router;
