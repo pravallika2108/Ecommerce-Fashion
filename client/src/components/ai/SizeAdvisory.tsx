@@ -24,27 +24,85 @@ export default function SizeAdvisory({
   });
   const [recommendation, setRecommendation] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const getRecommendation = async () => {
+    // Validate all fields are filled
     if (!measurements.height || !measurements.weight || !measurements.chest || !measurements.waist) {
-      alert('Please fill in all measurements');
+      setError('Please fill in all measurements');
+      return;
+    }
+
+    // Validate measurements are positive numbers
+    const height = parseFloat(measurements.height);
+    const weight = parseFloat(measurements.weight);
+    const chest = parseFloat(measurements.chest);
+    const waist = parseFloat(measurements.waist);
+
+    if (height <= 0 || weight <= 0 || chest <= 0 || waist <= 0) {
+      setError('Please enter valid positive numbers for all measurements');
+      return;
+    }
+
+    if (height > 300 || weight > 300 || chest > 200 || waist > 200) {
+      setError('Please enter realistic measurements');
       return;
     }
 
     setIsLoading(true);
     setRecommendation('');
+    setError('');
 
     try {
-      const response = await axios.post(`${API_URL}/api/ai/size-recommendation`, {
+      console.log('Sending request to:', `${API_URL}/api/ai/size-recommendation`);
+      console.log('Request data:', {
         productName,
         measurements,
         availableSizes,
       });
 
+      const response = await axios.post(
+        `${API_URL}/api/ai/size-recommendation`,
+        {
+          productName,
+          measurements: {
+            height: measurements.height,
+            weight: measurements.weight,
+            chest: measurements.chest,
+            waist: measurements.waist,
+          },
+          availableSizes,
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          timeout: 30000, // 30 second timeout
+        }
+      );
+
+      console.log('Response:', response.data);
       setRecommendation(response.data.recommendation);
-    } catch (error) {
-      console.error('Error:', error);
-      setRecommendation('Unable to get recommendation. Please try again.');
+    } catch (error: any) {
+      console.error('Size Advisory Error:', error);
+      
+      let errorMessage = 'Unable to get recommendation. Please try again.';
+      
+      if (error.response) {
+        // Server responded with error status
+        console.error('Error response:', error.response.data);
+        errorMessage = error.response.data?.error || error.response.data?.details || errorMessage;
+      } else if (error.request) {
+        // Request made but no response received
+        console.error('No response received:', error.request);
+        errorMessage = 'No response from server. Please check your connection.';
+      } else {
+        // Error setting up the request
+        console.error('Request setup error:', error.message);
+        errorMessage = error.message;
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -58,6 +116,7 @@ export default function SizeAdvisory({
       waist: '',
     });
     setRecommendation('');
+    setError('');
   };
 
   const handleClose = () => {
@@ -86,7 +145,10 @@ export default function SizeAdvisory({
                 <Ruler className="w-5 h-5" />
                 <h3 className="text-lg font-bold">Smart Size Advisory</h3>
               </div>
-              <button onClick={handleClose} className="hover:bg-blue-700 rounded p-1 transition-colors">
+              <button 
+                onClick={handleClose} 
+                className="hover:bg-blue-700 rounded p-1 transition-colors"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -102,7 +164,7 @@ export default function SizeAdvisory({
               <div className="space-y-4 mb-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Height (cm)
+                    Height (cm) *
                   </label>
                   <input
                     type="number"
@@ -112,12 +174,14 @@ export default function SizeAdvisory({
                     }
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="e.g., 170"
+                    min="0"
+                    max="300"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Weight (kg)
+                    Weight (kg) *
                   </label>
                   <input
                     type="number"
@@ -127,12 +191,14 @@ export default function SizeAdvisory({
                     }
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="e.g., 65"
+                    min="0"
+                    max="300"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Chest (cm)
+                    Chest (cm) *
                   </label>
                   <input
                     type="number"
@@ -142,12 +208,14 @@ export default function SizeAdvisory({
                     }
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="e.g., 90"
+                    min="0"
+                    max="200"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Waist (cm)
+                    Waist (cm) *
                   </label>
                   <input
                     type="number"
@@ -157,6 +225,8 @@ export default function SizeAdvisory({
                     }
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="e.g., 75"
+                    min="0"
+                    max="200"
                   />
                 </div>
               </div>
@@ -177,6 +247,13 @@ export default function SizeAdvisory({
                   ))}
                 </div>
               </div>
+
+              {/* Error Message */}
+              {error && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+                  <p className="text-sm text-red-700">{error}</p>
+                </div>
+              )}
 
               {/* Get Recommendation Button */}
               <button
@@ -206,6 +283,27 @@ export default function SizeAdvisory({
                   </p>
                 </div>
               )}
+
+              {/* How to Measure Guide */}
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <button
+                  onClick={() => {
+                    const guide = document.getElementById('measure-guide');
+                    if (guide) {
+                      guide.classList.toggle('hidden');
+                    }
+                  }}
+                  className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                >
+                  📏 How to measure yourself?
+                </button>
+                <div id="measure-guide" className="hidden mt-2 text-xs text-gray-600 space-y-1">
+                  <p><strong>Height:</strong> Stand straight against a wall</p>
+                  <p><strong>Weight:</strong> Use a scale in the morning</p>
+                  <p><strong>Chest:</strong> Measure around the fullest part</p>
+                  <p><strong>Waist:</strong> Measure around natural waistline</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
