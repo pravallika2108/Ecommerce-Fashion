@@ -1,97 +1,107 @@
-import { Request, Response } from "express";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+// controllers/aiController.js
 
-const hasGeminiKey = !!process.env.GEMINI_API_KEY;
+import axios from "axios";
 
-let genAI: GoogleGenerativeAI | null = null;
-let textModel: any = null;
-let visionModel: any = null;
+// Load your Perplexity API key from .env
+const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY;
 
-if (hasGeminiKey) {
-  // ✅ Initialize Gemini client (uses v1 endpoint automatically in latest SDK)
-  genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+const PERPLEXITY_API_URL = "https://api.perplexity.ai/chat/completions";
 
-  // ✅ Use correct model names for v1 API
-  textModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-  visionModel = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
-}
-
-// ---------------------- 1️⃣ CHAT ASSISTANT ----------------------
-export const handleChat = async (req: Request, res: Response): Promise<void> => {
+/**
+ * ############################
+ *      AI STYLE ASSISTANT
+ * ############################
+ */
+export const handleChat = async (req, res) => {
   try {
-    const { message } = req.body;
+    const { conversationHistory = [], message } = req.body;
 
-    if (!message) {
-      res.status(400).json({ error: "Message is required" });
-      return;
-    }
+    const messages = [
+      { role: "system", content: "You are a smart style assistant who gives fashion advice." },
+      ...conversationHistory,
+      { role: "user", content: message },
+    ];
 
-    if (!hasGeminiKey) {
-      res.json({
-        success: true,
-        reply: `👋 Mock AI Reply: Based on your message "${message}", here’s a smart fashion suggestion!`,
-      });
-      return;
-    }
-
-    const result = await textModel.generateContent({
-      contents: [{ role: "user", parts: [{ text: message }] }],
-    });
-
-    res.json({ success: true, reply: result.response.text() });
-  } catch (err) {
-    console.error("AI Chat Error:", err);
-    res.status(500).json({ success: false, message: "AI chat failed" });
-  }
-};
-
-// ---------------------- 2️⃣ VISUAL SEARCH ----------------------
-export const handleVisualSearch = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { imageBase64 } = req.body;
-
-    if (!imageBase64) {
-      res.status(400).json({ error: "Image is required" });
-      return;
-    }
-
-    if (!hasGeminiKey) {
-      res.json({
-        success: true,
-        analysis:
-          "🧠 Mock AI Visual Analysis: Detected a trendy outfit with modern style and neutral tones.",
-      });
-      return;
-    }
-
-    const result = await visionModel.generateContent({
-      contents: [
-        {
-          role: "user",
-          parts: [
-            { text: "Analyze this clothing image and describe type, color, and style." },
-            { inlineData: { mimeType: "image/jpeg", data: imageBase64 } },
-          ],
+    const result = await axios.post(
+      PERPLEXITY_API_URL,
+      {
+        model: "sonar-medium-chat", // or "sonar-small-chat" / other supported models
+        messages,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${PERPLEXITY_API_KEY}`,
+          "Content-Type": "application/json",
         },
-      ],
-    });
+      }
+    );
 
-    res.json({ success: true, analysis: result.response.text() });
-  } catch (err) {
-    console.error("AI Visual Search Error:", err);
-    res.status(500).json({ success: false, message: "Visual search failed" });
+    res.json({
+      success: true,
+      response: result.data.choices[0].message.content,
+    });
+  } catch (error) {
+    console.error("AI Chat Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "AI chat failed",
+    });
   }
 };
 
-// ---------------------- 3️⃣ SIZE ADVISORY ----------------------
-export const handleSizeAdvisory = async (req: Request, res: Response): Promise<void> => {
+/**
+ * ############################
+ *     VISUAL SEARCH
+ * ############################
+ */
+export const handleVisualSearch = async (req, res) => {
+  try {
+    const { imageBase64, mediaType } = req.body;
+
+    const messages = [
+      { role: "system", content: "You are a fashion image analyst. If the image contains clothing, describe style, type, and color in detail." },
+      {
+        role: "user",
+        content: "Analyze this clothing image and describe type, color, and style.",
+        images: [{ mime_type: mediaType || "image/jpeg", data: imageBase64 }],
+      },
+    ];
+
+    const result = await axios.post(
+      PERPLEXITY_API_URL,
+      {
+        model: "sonar-medium-chat", // Use a multi-modal model
+        messages,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${PERPLEXITY_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    res.json({
+      success: true,
+      analysis: result.data.choices[0].message.content,
+    });
+  } catch (error) {
+    console.error("AI Visual Search Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Visual search failed",
+    });
+  }
+};
+
+/**
+ * ############################
+ *     SIZE ADVISORY
+ * ############################
+ */
+export const handleSizeAdvisory = async (req, res) => {
   try {
     const { productName, availableSizes, measurements } = req.body;
-
-    if (!productName || !availableSizes || !measurements) {
-      res.status(400).json({ error: "Missing fields for size advisory." });
-      return;
-    }
 
     const prompt = `
       You are a fashion size advisor.
@@ -102,25 +112,38 @@ export const handleSizeAdvisory = async (req: Request, res: Response): Promise<v
       - Weight: ${measurements.weight} kg
       - Chest: ${measurements.chest} cm
       - Waist: ${measurements.waist} cm
-      Suggest best size and reasoning.
+      Suggest the best size and explain your reasoning in a short friendly response.
     `;
 
-    if (!hasGeminiKey) {
-      res.json({
-        success: true,
-        recommendation:
-          "👕 Mock Suggestion: Based on height and weight, we recommend Medium (M) for a relaxed fit.",
-      });
-      return;
-    }
+    const messages = [
+      { role: "system", content: "You are an expert fashion size advisor." },
+      { role: "user", content: prompt },
+    ];
 
-    const result = await textModel.generateContent({
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
+    const result = await axios.post(
+      PERPLEXITY_API_URL,
+      {
+        model: "sonar-medium-chat", // Or other supported models
+        messages,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${PERPLEXITY_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    res.json({
+      success: true,
+      recommendation: result.data.choices[0].message.content,
     });
-
-    res.json({ success: true, recommendation: result.response.text() });
-  } catch (err) {
-    console.error("AI Size Advisory Error:", err);
-    res.status(500).json({ success: false, message: "Size advisory failed" });
+  } catch (error) {
+    console.error("AI Size Advisory Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Size advisory failed",
+    });
   }
 };
+
