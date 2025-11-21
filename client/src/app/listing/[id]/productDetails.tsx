@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
 import ProductDetailsSkeleton from "./productSkeleton";
 import { useCartStore } from "@/store/useCartStore";
 import { useToast } from "@/hooks/use-toast";
-import SizeAdvisory from "@/components/ai/SizeAdvisory"; // ✅ ADD THIS LINE
+
 
 function ProductDetailsContent({ id }: { id: string }) {
   const [product, setProduct] = useState<any>(null);
@@ -153,10 +153,7 @@ function ProductDetailsContent({ id }: { id: string }) {
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-medium">Size</h3>
                 {/* ✅ ADD SIZE ADVISORY BUTTON HERE */}
-                <SizeAdvisory 
-                  productName={product.name}
-                  availableSizes={product.sizes}
-                />
+               
               </div>
               <div className="flex gap-2 flex-wrap">
                 {product.sizes.map((size: string, index: number) => (
